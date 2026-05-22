@@ -1,0 +1,2463 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Usnea Scroll</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Cinzel:wght@400;600&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0a0f0a;--bg2:#121a12;--bg3:#1a241a;
+  --border:#3a3020;--border2:#5a4a30;
+  --text:#dde8cc;--text2:#9aaa80;--text3:#5a6a48;
+  --accent:#5ab0ff;--accent2:#3a80dd;
+  --gold:#e0a840;--gold2:#906820;
+  --found:#70dd80;--found2:#1a6830;
+  --door-locked:#e05050;--door-open:#70dd80;
+  --moss:#4a8050;--bark:#5a4028;
+}
+html,body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monospace;overflow-x:hidden}
+#app{padding:20px 16px;max-width:860px;margin:0 auto;transition:max-width .25s}
+#app.compose-mode{max-width:540px}
+
+/* ── Title & tagline ──────────────────────────────────────────────────────── */
+h1{font-family:'Cinzel',serif;font-size:17px;font-weight:400;color:var(--gold);letter-spacing:.3em;text-transform:uppercase;margin-bottom:0;opacity:.95;cursor:pointer}
+h1:hover{opacity:1}
+#tagline{font-size:13px;color:var(--text3);letter-spacing:.1em;margin-bottom:1.8rem;line-height:2}
+#app.play-mode #tagline{display:none}
+
+/* ── New scroll link ──────────────────────────────────────────────────────── */
+#new-scroll-btn{display:block;font-size:11px;color:var(--gold2);cursor:pointer;background:none;border:none;font-family:'Share Tech Mono',monospace;padding:0;margin-bottom:14px;letter-spacing:.1em;text-align:left;transition:color .15s}
+#new-scroll-btn:hover{color:var(--gold)}
+
+/* ── Compose form ─────────────────────────────────────────────────────────── */
+#msg-input-wrap{margin-bottom:14px}
+#msg-input-wrap input{width:100%;padding:12px 16px;font-family:'Share Tech Mono',monospace;font-size:14px;background:var(--bg2);border:1px solid var(--border2);border-radius:3px;color:var(--text);outline:none;transition:border-color .15s,box-shadow .15s}
+#msg-input-wrap input::placeholder{color:var(--text3)}
+#msg-input-wrap input:focus{border-color:var(--gold2);box-shadow:0 0 0 2px rgba(144,104,32,.2)}
+#char-counter-row{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:11px}
+#char-count{color:var(--text2);font-variant-numeric:tabular-nums}
+#char-count.warn{color:var(--gold)}
+#char-count.full{color:var(--door-locked)}
+#char-max{color:var(--text3)}
+#room-preview{color:var(--gold2);margin-left:auto;letter-spacing:.06em}
+#gen-btn{display:block;width:100%;margin-top:14px;padding:15px 20px;font-size:12px;cursor:pointer;letter-spacing:.22em;border:1px solid var(--gold);border-radius:3px;background:rgba(224,168,64,.07);color:var(--gold);font-family:'Share Tech Mono',monospace;transition:all .25s;text-transform:uppercase;text-shadow:0 0 14px rgba(224,168,64,.25)}
+#gen-btn:hover,#gen-btn:active{background:rgba(224,168,64,.16);border-color:var(--gold);box-shadow:0 0 28px rgba(224,168,64,.1),inset 0 0 10px rgba(224,168,64,.05);text-shadow:0 0 18px rgba(224,168,64,.45)}
+#warn{display:none;font-size:11px;color:#e08040;margin-top:6px;line-height:1.6}
+#compose-canopy{margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+#compose-canopy-label{font-size:10px;color:var(--text3);letter-spacing:.18em;text-transform:uppercase;margin-bottom:8px}
+#compose-canopy-desc{font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.7}
+#scroll-ready{display:none;margin-top:14px}
+#scroll-ready-label{font-size:11px;color:var(--text3);letter-spacing:.1em;margin-bottom:12px;text-align:center}
+#scroll-ready-actions{display:flex;gap:8px}
+#compose-share-btn{flex:1;min-width:0;padding:11px;font-size:11px;cursor:pointer;letter-spacing:.12em;border:1px solid var(--border2);border-radius:3px;background:transparent;color:var(--text2);font-family:'Share Tech Mono',monospace;transition:all .15s;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#compose-share-btn:hover{border-color:var(--found2);color:var(--found)}
+#enter-btn{flex:1;padding:11px;font-size:11px;cursor:pointer;letter-spacing:.16em;border:1px solid var(--gold);border-radius:3px;background:rgba(224,168,64,.07);color:var(--gold);font-family:'Share Tech Mono',monospace;transition:all .2s;text-transform:uppercase;text-shadow:0 0 12px rgba(224,168,64,.2)}
+#enter-btn:hover{background:rgba(224,168,64,.16);box-shadow:0 0 20px rgba(224,168,64,.1);text-shadow:0 0 16px rgba(224,168,64,.4)}
+#compose-intro{font-size:11px;color:var(--text3);line-height:1.8;margin-bottom:14px;letter-spacing:.04em}
+#app.play-mode #compose-intro{display:none}
+
+/* ── Mobile HUD ───────────────────────────────────────────────────────────── */
+#hud-bar{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+#hud-room{font-size:12px;color:var(--text2);white-space:nowrap}
+#hud-room span{color:var(--gold);font-weight:bold}
+#hud-steps{font-size:12px;color:var(--accent);white-space:nowrap;font-variant-numeric:tabular-nums}
+#hud-lock{font-size:12px;flex:1;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#hud-lock.locked{color:var(--door-locked)}
+#hud-lock.open{color:var(--door-open)}
+#hud-lock.prompt{color:var(--gold)}
+
+/* ── Mobile decode strip (collapsible) ────────────────────────────────────── */
+#decode-strip{margin-bottom:8px;padding:8px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:4px}
+#strip-toggle{display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;color:var(--text3);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;padding:0;margin-bottom:7px}
+#strip-toggle:hover{color:var(--text2)}
+#strip-arrow{display:inline-block;width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid currentColor;vertical-align:middle;transition:transform .2s}
+#decode-strip.collapsed #strip-arrow{transform:rotate(-90deg)}
+#decode-strip.collapsed #mobile-decode-wrap{display:none}
+#decode-strip.collapsed #progress-bar{margin-top:0}
+#mobile-decode-wrap{display:flex;flex-wrap:wrap;gap:3px}
+.dchar{display:inline-flex;align-items:center;justify-content:center;width:19px;height:21px;font-size:12px;border:1px solid var(--border2);border-radius:2px;background:var(--bg3);color:var(--text3);transition:color .3s,background .3s,border-color .3s}
+.dchar.found{border-color:var(--found2);background:rgba(112,221,128,.18);color:var(--found)}
+.dchar.punct{border-color:var(--gold2);color:var(--gold2)}
+.dchar.punct.found{border-color:var(--gold);background:rgba(224,168,64,.18);color:var(--gold)}
+.dchar.space{width:6px;background:transparent;border-color:transparent}
+#progress-bar{height:2px;background:var(--border);border-radius:2px;margin-top:6px;width:100%}
+#progress-fill{height:2px;background:var(--found);border-radius:2px;width:0%;transition:width .4s}
+
+/* ── Mobile fog row (scrollable) ─────────────────────────────────────────── */
+#mobile-fog{display:none;margin-bottom:10px}
+#mobile-fog .fog-row{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:3px;justify-content:flex-start;scrollbar-width:none}
+#mobile-fog .fog-row::-webkit-scrollbar{display:none}
+
+/* ── Canvas ───────────────────────────────────────────────────────────────── */
+#canvas-outer{display:flex;flex-direction:column;align-items:center;margin-bottom:10px}
+canvas{display:block;border:1px solid var(--border2);border-bottom:none;outline:none;touch-action:none;border-radius:2px 2px 0 0}
+#canvas-passage{width:100%;padding:7px 12px;background:var(--bg2);border:1px solid var(--border2);border-radius:0 0 3px 3px;font-size:12px;text-align:center;letter-spacing:.05em}
+#canvas-passage.locked{color:var(--door-locked)}
+#canvas-passage.open{color:var(--door-open)}
+#canvas-passage.prompt{color:var(--gold)}
+
+/* ── Desktop layout ───────────────────────────────────────────────────────── */
+#desktop-layout{display:flex;gap:1.5rem;align-items:flex-start}
+#sidebar{flex:1;min-width:210px;max-width:230px;display:flex;flex-direction:column;gap:.8rem}
+.panel{background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:13px 15px}
+.panel-title{font-size:10px;color:var(--text3);letter-spacing:.2em;text-transform:uppercase;margin-bottom:10px;padding-bottom:7px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px}
+.panel-title::before{content:'';display:block;width:2px;height:10px;background:var(--gold2);border-radius:1px;flex-shrink:0}
+#sidebar-steps{font-size:30px;color:var(--accent);font-variant-numeric:tabular-nums;font-weight:bold;letter-spacing:-.01em}
+#sidebar-steps-label{font-size:10px;color:var(--text3);margin-top:3px;letter-spacing:.08em}
+#sidebar-room{font-size:12px;color:var(--text2);margin-top:9px}
+#sidebar-room span{color:var(--gold);font-weight:bold}
+#room-map{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
+.room-pip{width:13px;height:13px;border-radius:2px;border:1px solid var(--border2);background:var(--bg3);transition:all .3s}
+.room-pip.current{border-color:var(--accent);background:rgba(90,176,255,.25)}
+.room-pip.done{border-color:var(--found2);background:var(--found2)}
+#sidebar-decode-wrap{display:flex;flex-wrap:wrap;gap:3px}
+#sidebar-progress-bar{height:2px;background:var(--border);border-radius:2px;margin-top:9px}
+#sidebar-progress-fill{height:2px;background:var(--found);border-radius:2px;width:0%;transition:width .4s}
+.fog-btn{padding:5px 11px;font-size:11px;cursor:pointer;letter-spacing:.07em;border:1px solid var(--border2);border-radius:2px;background:transparent;color:var(--text2);font-family:'Share Tech Mono',monospace;transition:all .15s}
+.fog-btn:hover,.fog-btn:active{color:var(--text);border-color:var(--text3)}
+.fog-btn.active{border-color:var(--accent2);color:var(--accent);background:rgba(90,176,255,.1)}
+.fog-row{display:flex;gap:5px;flex-wrap:wrap}
+#sidebar-lock{font-size:13px;margin-top:4px;line-height:1.7;letter-spacing:.03em}
+#sidebar-lock.locked span{color:var(--door-locked)}
+#sidebar-lock.open span{color:var(--door-open)}
+#sidebar-lock.prompt span{color:var(--gold)}
+#inventory-display{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.inv-key{display:flex;align-items:center;gap:5px;font-size:11px;padding:3px 8px;border-radius:3px;border:1px solid}
+#instructions-panel{font-size:11px;color:var(--text3);line-height:2.2;letter-spacing:.03em}
+.wf-row{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.wf-input{color:var(--text2)}
+.wf-action{color:var(--text3)}
+.wf-enter{color:var(--gold)}
+
+/* ── Victory ──────────────────────────────────────────────────────────────── */
+#victory{display:none;margin-top:1.4rem;padding:28px 24px;background:rgba(112,221,128,.05);border:1px solid var(--found2);border-radius:4px;text-align:center}
+#victory-header{font-size:10px;color:var(--found);letter-spacing:.22em;text-transform:uppercase;margin-bottom:18px}
+#victory-ornament{color:var(--gold2);font-size:12px;letter-spacing:.5em;margin-bottom:18px}
+#victory-msg{font-family:'Cinzel',serif;font-size:18px;color:var(--gold);line-height:1.85;word-break:break-word;min-height:1.85em;cursor:pointer}
+#victory-stats{font-size:11px;color:var(--text3);letter-spacing:.1em;margin-top:22px;opacity:0;transition:opacity .8s}
+#victory-stats.visible{opacity:1}
+#victory-actions{display:none;flex-direction:column;align-items:center;gap:10px;margin-top:18px;opacity:0;transition:opacity .8s .3s}
+#victory-actions.visible{opacity:1}
+#share-btn{padding:8px 22px;font-size:11px;cursor:pointer;letter-spacing:.14em;border:1px solid var(--found2);border-radius:3px;background:transparent;color:var(--found);font-family:'Share Tech Mono',monospace;transition:all .15s;text-transform:uppercase}
+#share-btn:hover{background:rgba(112,221,128,.1);border-color:var(--found)}
+#replay-btn{padding:8px 22px;font-size:11px;cursor:pointer;letter-spacing:.14em;border:1px solid var(--gold2);border-radius:3px;background:transparent;color:var(--gold);font-family:'Share Tech Mono',monospace;transition:all .15s;text-transform:uppercase}
+#replay-btn:hover{background:rgba(224,168,64,.1);border-color:var(--gold)}
+#replay-canopy-section{display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+#replay-canopy-section .fog-row{justify-content:center;margin-bottom:12px}
+#replay-go{padding:7px 20px;font-size:11px;cursor:pointer;letter-spacing:.14em;border:1px solid var(--gold2);border-radius:3px;background:transparent;color:var(--gold);font-family:'Share Tech Mono',monospace;transition:all .15s;text-transform:uppercase}
+#replay-go:hover{background:rgba(224,168,64,.1);border-color:var(--gold)}
+
+/* ── View mode toggling ───────────────────────────────────────────────────── */
+#compose-canopy{margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+#app.compose-mode #desktop-layout,
+#app.compose-mode #hud-bar,
+#app.compose-mode #decode-strip,
+#app.compose-mode #mobile-fog,
+#app.compose-mode #new-scroll-btn{display:none!important}
+#app.play-mode #msg-input-wrap,
+#app.play-mode #tagline,
+#app.play-mode #compose-canopy{display:none!important}
+#app.play-mode #canopy-panel,
+#app.play-mode #mobile-fog,
+#app.play-mode #hud-lock{display:none!important}
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+@media(max-width:600px){
+  #app{padding:12px}
+  #desktop-layout{display:block}
+  #sidebar{display:none}
+  #mobile-fog{display:block}
+  #hud-bar,#decode-strip{display:flex}
+}
+@media(min-width:601px){
+  #hud-bar,#decode-strip,#mobile-fog{display:none!important}
+  #desktop-layout{display:flex}
+  #sidebar{display:flex}
+}
+
+/* ── First-time intro overlay ─────────────────────────────────────────────── */
+#intro-overlay,#receiver-overlay{position:fixed;inset:0;background:rgba(10,15,10,.92);display:none;align-items:center;justify-content:center;z-index:1000;padding:24px;opacity:0;transition:opacity .5s}
+#intro-overlay.visible,#receiver-overlay.visible{opacity:1}
+#intro-panel,#receiver-panel{max-width:400px;width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;padding:36px 32px;text-align:center}
+#intro-title,#receiver-title{font-family:'Cinzel',serif;font-size:15px;font-weight:400;color:var(--gold);letter-spacing:.35em;text-transform:uppercase;margin-bottom:24px;opacity:.9}
+#intro-body p,#receiver-body p{font-size:12px;color:var(--text2);line-height:1.85;letter-spacing:.04em;margin-bottom:12px}
+#intro-body p:last-child,#receiver-body p:last-child{margin-bottom:0}
+#receiver-body p.tips{font-size:11px;color:var(--text3);margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+#intro-btn,#receiver-btn{margin-top:28px;padding:11px 32px;font-size:11px;cursor:pointer;letter-spacing:.2em;border:1px solid var(--gold2);border-radius:3px;background:transparent;color:var(--gold);font-family:'Share Tech Mono',monospace;transition:all .2s;text-transform:uppercase}
+#intro-btn:hover,#receiver-btn:hover{background:rgba(224,168,64,.1);border-color:var(--gold)}
+/* ── Help button ──────────────────────────────────────────────────────────── */
+#help-btn{background:transparent;border:1px solid var(--border2);border-radius:3px;color:var(--text3);font-family:'Share Tech Mono',monospace;font-size:10px;padding:2px 6px;cursor:pointer;line-height:1;transition:color .2s,border-color .2s;flex-shrink:0}
+#help-btn:hover{color:var(--gold);border-color:var(--gold2)}
+/* ── Page header ────────────────────────────────────────────────────────────── */
+#page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.3rem}
+#about-trigger{display:flex;align-items:center;gap:8px;cursor:pointer;opacity:.55;transition:opacity .2s;flex-shrink:0;user-select:none}
+#about-trigger:hover{opacity:1}
+#about-trigger svg{display:block;border-radius:50%;flex-shrink:0}
+#about-meta{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+#about-version{font-size:11px;color:var(--text2);letter-spacing:.1em;font-family:'Share Tech Mono',monospace}
+#about-label{font-size:11px;color:var(--text2);letter-spacing:.12em;font-family:'Share Tech Mono',monospace}
+/* ── HUD about button ───────────────────────────────────────────────────────── */
+#hud-about-btn{background:transparent;border:none;padding:0;cursor:pointer;opacity:.5;transition:opacity .2s;display:flex;align-items:center;flex-shrink:0;line-height:0}
+#hud-about-btn:hover{opacity:1}
+#hud-about-btn svg{display:block;border-radius:50%}
+/* ── About overlay ──────────────────────────────────────────────────────────── */
+#about-overlay{position:fixed;inset:0;background:rgba(10,15,10,.92);display:none;align-items:center;justify-content:center;z-index:1000;padding:24px;opacity:0;transition:opacity .5s}
+#about-overlay.visible{opacity:1}
+#about-panel{max-width:400px;width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;padding:36px 32px;text-align:center}
+#about-banner{width:100%;height:auto;display:block;margin-bottom:20px;border-radius:3px;overflow:hidden}
+#about-blurb{font-size:13px;color:var(--text2);line-height:1.85;letter-spacing:.03em;margin-bottom:24px}
+#about-blurb p{margin-bottom:14px}
+#about-blurb p:last-child{margin-bottom:0}
+#about-forge{font-size:11px;color:var(--text3);border-top:1px solid var(--border);padding-top:14px;margin-top:4px}
+#about-forge span{color:var(--gold2);letter-spacing:.1em}
+#about-links{display:flex;flex-direction:column;gap:8px;margin-bottom:22px}
+#about-links a{display:block;padding:11px 16px;font-size:11px;letter-spacing:.16em;text-decoration:none;border-radius:3px;font-family:'Share Tech Mono',monospace;transition:all .2s;text-transform:uppercase}
+#about-github{border:1px solid var(--border2);color:var(--text2)}
+#about-github:hover{border-color:var(--gold2);color:var(--gold)}
+#about-bug{border:1px solid var(--border2);color:var(--text2)}
+#about-bug:hover{border-color:var(--gold2);color:var(--gold)}
+#about-support{border:1px solid var(--gold2);color:var(--gold);background:rgba(224,168,64,.07);margin-top:4px}
+#about-support:hover{background:rgba(224,168,64,.15);border-color:var(--gold)}
+#about-close{padding:9px 28px;font-size:11px;cursor:pointer;letter-spacing:.2em;border:1px solid var(--border2);border-radius:3px;background:transparent;color:var(--text3);font-family:'Share Tech Mono',monospace;transition:all .2s;text-transform:uppercase}
+#about-close:hover{color:var(--text2);border-color:var(--text3)}
+/* ── Poem overlay ───────────────────────────────────────────────────────────── */
+#poem-overlay{position:fixed;inset:0;background:rgba(10,15,10,.88);display:none;align-items:center;justify-content:center;z-index:1000;padding:40px 32px;opacity:0;transition:opacity .4s;cursor:pointer}
+#poem-overlay.visible{opacity:1}
+#poem-panel{font-style:italic;color:var(--text2);font-size:14px;line-height:2.4;letter-spacing:.06em;text-align:left;pointer-events:none}
+@media(min-width:600px){
+  #about-trigger svg{width:36px;height:36px}
+  #about-version,#about-label{font-size:13px}
+}
+</style>
+</head>
+<body>
+<div id="intro-overlay">
+  <div id="intro-panel">
+    <div id="intro-title">Usnea Scroll</div>
+    <div id="intro-body">
+      <p>the old growth remembers every word</p>
+      <p>within the loom of broad branches</p>
+      <p>a scroll of usnea is woven</p>
+      <p>revealed by the undergrowth</p>
+    </div>
+    <button id="intro-btn">begin</button>
+  </div>
+</div>
+<div id="about-overlay">
+  <div id="about-panel">
+    <svg id="about-banner"
+   viewBox="0 0 423.33333 105.83333"
+   version="1.1"
+   xmlns="http://www.w3.org/2000/svg"><g
+     id="layer13"
+     transform="matrix(0.99178403,0,0,0.95890411,1.4871847,2.4237023)"
+     style="stroke:#000000;stroke-opacity:0.997674"><rect
+       style="fill:#fefae0;fill-opacity:1;stroke:#000000;stroke-width:1.661;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:0.997674"
+       width="427.03848"
+       height="109.76694"
+       x="-2.0048754"
+       y="-2.0048754" /></g><g
+     style="fill:#bc6c25;fill-opacity:1;stroke-width:1;stroke-dasharray:none"
+     transform="matrix(1.0375901,0,0,1.0290507,-10.928991,-14.37775)"><text
+       xml:space="preserve"
+       style="font-size:49.1389px;font-family:'Libre Baskerville';fill:#bc6c25;fill-opacity:1;stroke:#000000;stroke-width:1;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:0.997674"
+       x="103.08613"
+       y="84.745079"><tspan
+         style="font-size:49.1389px;fill:#bc6c25;fill-opacity:1;stroke-width:1;stroke-dasharray:none"
+         x="103.08613"
+         y="84.745079">Usnea Forge</tspan></text></g><g><g
+       transform="matrix(0.86059217,0,0,0.86059217,-7.8051361,-5.7703095)"><circle
+         style="fill:#fefae0;fill-opacity:1;stroke:#000000;stroke-width:1.06122;stroke-linecap:round;stroke-linejoin:bevel;stroke-dasharray:none;stroke-opacity:1;paint-order:normal"
+         cx="66.475739"
+         cy="64.496315"
+         r="51.409477" /><g
+         transform="translate(-10.632458,-64.50358)"
+         style="fill:#bc6c25;fill-opacity:1;stroke:#000000;stroke-width:0.65;stroke-linejoin:bevel;stroke-dasharray:none;stroke-opacity:1;paint-order:normal"><path
+           style="fill:#bc6c25;fill-opacity:1;stroke:#000000;stroke-width:0.95;stroke-linecap:round;stroke-linejoin:bevel;stroke-dasharray:none;stroke-opacity:1;paint-order:normal"
+           d="m 76.778291,75.606778 c -29.522414,9.9e-5 -53.455034,23.932718 -53.455135,53.455132 9.7e-5,29.52242 23.932718,53.45504 53.455135,53.45514 29.522419,-1e-4 53.455039,-23.93272 53.455139,-53.45514 -1e-4,-29.522415 -23.93272,-53.455035 -53.455139,-53.455132 z m 0.287321,4.342371 c 3.234322,0.0023 6.468031,0.323934 9.637655,0.974101 11.269776,2.311703 21.642733,8.759652 28.703673,17.842321 7.06094,9.082669 10.75215,20.725869 10.21333,32.217669 -0.53881,11.4918 -5.30283,22.73844 -13.18266,31.12058 -7.87981,8.38216 -18.811128,13.83108 -30.247763,15.07815 -11.436634,1.24708 -23.285467,-1.71777 -32.786629,-8.20466 l 30.187305,-37.13262 c 0.17924,-0.22048 0.361232,-0.44086 0.575158,-0.62787 0.213927,-0.18701 0.459764,-0.3401 0.729672,-0.42891 0.269907,-0.0888 0.562124,-0.11191 0.841292,-0.0589 0.279168,0.0529 0.543833,0.18167 0.75706,0.36948 l 16.622758,13.23485 9.809737,-12.04991 -27.633456,-22.81979 -22.150069,-4.10415 c -0.514835,-0.0954 -1.03811,-0.18472 -1.559078,-0.13229 -0.520966,0.0524 -1.036011,0.25346 -1.412317,0.61754 -0.376306,0.36407 -0.599033,0.88814 -0.577225,1.41128 0.02181,0.52315 0.290014,1.03131 0.711067,1.34255 l 17.303854,15.30863 c 0.5377,0.69739 1.120851,1.32663 -0.268201,2.98173 L 43.038232,163.7952 c -5.303951,-5.1178 -9.424706,-11.45429 -11.951209,-18.3782 -3.943571,-10.80741 -3.894992,-23.0215 0.133842,-33.79742 4.028834,-10.77591 12.005077,-20.025913 22.071521,-25.59534 7.235256,-4.003026 15.507737,-6.081074 23.773226,-6.075081 z" /></g><path
+         style="fill:#283618;fill-opacity:1;stroke:#000000;stroke-width:0.661458;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
+         d="m 98.293674,67.77999 c 0.72611,6.53528 0.49206,11.63639 3.848116,16.82905 -2.08841,-0.097 -4.176828,-0.45317 -6.265238,-3.50854 -1.88933,8.92741 -1.44858,12.35716 1.70511,17.2187 -2.51304,-2.05417 -7.17619,-4.77602 -6.88696,-3.15742 1.73024,9.68293 -1.2748,28.54956 -3.088258,31.92556 C 86.6096,104.78877 80.422478,98.22809 75.702495,115.93522 73.999828,110.54462 73.337863,102.35347 73.51923,96.94458 73.6967,91.65191 69.651464,92.7731 68.058905,104.40718 61.576322,98.85413 64.513557,90.97746 64.299765,83.85721 61.746978,83.35536 61.209874,88.79846 59.9141,91.12488 58.124792,88.54867 56.737065,85.06827 58.455397,80.25992 L 68.957912,67.341 l 1.305033,-1.05672 1.598203,0.31046 16.622738,13.23477 z" /><path
+         style="fill:#657830;fill-opacity:1;stroke:none"
+         d="m 66.762977,97.5971 c 0.125384,-3.16836 4.296309,-12.91591 3.942898,-14.88271 -0.470758,-2.61985 -2.708466,-5.05442 0.354387,-11.65413 -5.024164,6.87876 -6.622559,25.06313 -4.297285,26.53684 z" /><path
+         style="fill:#657830;fill-opacity:1;stroke:none"
+         d="m 83.730607,90.37589 c 4.158065,4.06152 6.286615,10.65993 4.784606,21.79654 -2.056794,-6.04038 -4.109444,-12.10978 -7.088304,-11.6957 4.100431,-1.36743 2.696181,-6.03766 2.303698,-10.10084 z" /><path
+         style="fill:#657830;fill-opacity:1;stroke:none"
+         d="m 93.920052,94.62888 c -1.30647,-4.09472 0.30407,-13.11706 1.15185,-19.58145 -1.64561,4.54456 -2.67464,5.93864 -5.49344,6.02506 0.37498,6.26114 2.08414,10.35425 4.34159,13.55639 z" /></g></g></svg>
+
+    <div id="about-blurb">
+      <p>Write a message. The undergrowth reads it and grows a maze. Share the link. Someone walks the lichen's winding path to find what you left in the clearings.</p>
+      <p id="about-forge"><span>Usnea Forge:</span> Software shaped by forests and scant free time. Fueled by coffee. A dad and his dog building small, strange, and deliberate things.</p>
+    </div>
+    <div id="about-links">
+      <a id="about-github" href="https://github.com/UsneaForge/Usnea-Scroll" target="_blank" rel="noopener">GitHub</a>
+      <a id="about-bug" href="https://docs.google.com/forms/d/e/1FAIpQLSce5gBkL85GX8-qS5uF7dzBy6JxBWKizRfRy7U4yyZsLDlwNw/viewform?usp=pp_url&entry.1408221522=Usnea+Scroll&entry.1148424717=0.0.1" target="_blank" rel="noopener">report a bug</a>
+      <a id="about-support" href="https://buymeacoffee.com/usneaforge" target="_blank" rel="noopener">support the forge</a>
+    </div>
+    <button id="about-close">close</button>
+  </div>
+</div>
+<div id="poem-overlay">
+  <div id="poem-panel">
+    <p>the old growth remembers every word</p>
+    <p>within the loom of broad branches</p>
+    <p>a scroll of usnea is woven</p>
+    <p>revealed by the undergrowth</p>
+  </div>
+</div>
+<div id="receiver-overlay">
+  <div id="receiver-panel">
+    <div id="receiver-title">Usnea Scroll</div>
+    <div id="receiver-body">
+      <p>undergrowth shaped by the scroll</p>
+      <p>usnea's winding path</p>
+      <p class="tips" id="receiver-tips"></p>
+    </div>
+    <button id="receiver-btn">enter</button>
+  </div>
+</div>
+<div id="app">
+  <div id="page-header">
+    <h1 id="title-heading">Usnea Scroll</h1>
+    <div id="about-trigger">
+      <svg width="30" height="30" viewBox="0 0 132.29166 132.29166" xmlns="http://www.w3.org/2000/svg">
+        <circle fill="#fefae0" stroke="#000" stroke-width="1.06" cx="66.476" cy="64.496" r="51.409"/>
+        <g transform="translate(-10.632458,-64.50358)" fill="#bc6c25" stroke="#000" stroke-width="0.95" stroke-linejoin="bevel">
+          <path d="m 76.778291,75.606778 c -29.522414,9.9e-5 -53.455034,23.932718 -53.455135,53.455132 9.7e-5,29.52242 23.932718,53.45504 53.455135,53.45514 29.522419,-1e-4 53.455039,-23.93272 53.455139,-53.45514 -1e-4,-29.522415 -23.93272,-53.455035 -53.455139,-53.455132 z m 0.287321,4.342371 c 3.234322,0.0023 6.468031,0.323934 9.637655,0.974101 11.269776,2.311703 21.642733,8.759652 28.703673,17.842321 7.06094,9.082669 10.75215,20.725869 10.21333,32.217669 -0.53881,11.4918 -5.30283,22.73844 -13.18266,31.12058 -7.87981,8.38216 -18.811128,13.83108 -30.247763,15.07815 -11.436634,1.24708 -23.285467,-1.71777 -32.786629,-8.20466 l 30.187305,-37.13262 c 0.17924,-0.22048 0.361232,-0.44086 0.575158,-0.62787 0.213927,-0.18701 0.459764,-0.3401 0.729672,-0.42891 0.269907,-0.0888 0.562124,-0.11191 0.841292,-0.0589 0.279168,0.0529 0.543833,0.18167 0.75706,0.36948 l 16.622758,13.23485 9.809737,-12.04991 -27.633456,-22.81979 -22.150069,-4.10415 c -0.514835,-0.0954 -1.03811,-0.18472 -1.559078,-0.13229 -0.520966,0.0524 -1.036011,0.25346 -1.412317,0.61754 -0.376306,0.36407 -0.599033,0.88814 -0.577225,1.41128 0.02181,0.52315 0.290014,1.03131 0.711067,1.34255 l 17.303854,15.30863 c 0.5377,0.69739 1.120851,1.32663 -0.268201,2.98173 L 43.038232,163.7952 c -5.303951,-5.1178 -9.424706,-11.45429 -11.951209,-18.3782 -3.943571,-10.80741 -3.894992,-23.0215 0.133842,-33.79742 4.028834,-10.77591 12.005077,-20.025913 22.071521,-25.59534 7.235256,-4.003026 15.507737,-6.081074 23.773226,-6.075081 z"/>
+        </g>
+        <path fill="#283618" stroke="#000" stroke-width="0.661" stroke-linecap="round" stroke-linejoin="round" d="m 98.293674,67.77999 c 0.72611,6.53528 0.49206,11.63639 3.848116,16.82905 -2.08841,-0.097 -4.176828,-0.45317 -6.265238,-3.50854 -1.88933,8.92741 -1.44858,12.35716 1.70511,17.2187 -2.51304,-2.05417 -7.17619,-4.77602 -6.88696,-3.15742 1.73024,9.68293 -1.2748,28.54956 -3.088258,31.92556 C 86.6096,104.78877 80.422478,98.22809 75.702495,115.93522 73.999828,110.54462 73.337863,102.35347 73.51923,96.94458 73.6967,91.65191 69.651464,92.7731 68.058905,104.40718 61.576322,98.85413 64.513557,90.97746 64.299765,83.85721 61.746978,83.35536 61.209874,88.79846 59.9141,91.12488 58.124792,88.54867 56.737065,85.06827 58.455397,80.25992 L 68.957912,67.341 l 1.305033,-1.05672 1.598203,0.31046 16.622738,13.23477 z"/>
+      </svg>
+      <div id="about-meta">
+        <span id="about-version">v0.0.1</span>
+        <span id="about-label">help/about</span>
+      </div>
+    </div>
+  </div>
+  <p id="tagline">words plant the seeds of forests<br>wanderers find their stories</p>
+  <button id="new-scroll-btn">&lt; inscribe a new scroll</button>
+  <p id="compose-intro">the same words always grow the same forest.<br>what you inscribe, they will wander.</p>
+  <div id="msg-input-wrap">
+    <input id="msg-in" maxlength="250" placeholder="a name. a memory. a secret."/>
+    <div id="char-counter-row">
+      <span id="char-count">0</span><span id="char-max"> / 250</span>
+      <span id="room-preview"></span>
+    </div>
+    <div id="warn"></div>
+    <button id="gen-btn">cast the scroll</button>
+    <div id="scroll-ready">
+      <div id="scroll-ready-label">the scroll is cast.</div>
+      <div id="scroll-ready-actions">
+        <button id="compose-share-btn">copy link</button>
+        <button id="enter-btn">enter the forest</button>
+      </div>
+    </div>
+    <div id="compose-canopy">
+      <div id="compose-canopy-label">canopy</div>
+      <div id="compose-canopy-desc">how thick does the canopy grow?</div>
+      <div class="fog-row">
+        <button class="fog-btn active" data-fog="0" title="full visibility">sunlit</button>
+        <button class="fog-btn" data-fog="3" title="gentle haze, visited cells stay lit">mist</button>
+        <button class="fog-btn" data-fog="2.2" title="tight radius, visited cells stay lit">dusk</button>
+        <button class="fog-btn" data-fog="1.4" title="very close range, visited cells stay lit">night</button>
+        <button class="fog-btn" data-fog="-1" title="darkness closes behind you as you move">midnight</button>
+      </div>
+    </div>
+  </div>
+  <div id="hud-bar">
+    <div id="hud-room">clearing <span id="hud-room-cur">1</span>/<span id="hud-room-tot">1</span></div>
+    <div id="hud-steps">0 steps</div>
+    <div id="hud-lock" class="open">-</div>
+    <button id="hud-about-btn" title="About Usnea Forge">
+      <svg width="16" height="16" viewBox="0 0 132.29166 132.29166" xmlns="http://www.w3.org/2000/svg">
+        <circle fill="#fefae0" stroke="#000" stroke-width="1.06" cx="66.476" cy="64.496" r="51.409"/>
+        <g transform="translate(-10.632458,-64.50358)" fill="#bc6c25" stroke="#000" stroke-width="0.95" stroke-linejoin="bevel">
+          <path d="m 76.778291,75.606778 c -29.522414,9.9e-5 -53.455034,23.932718 -53.455135,53.455132 9.7e-5,29.52242 23.932718,53.45504 53.455135,53.45514 29.522419,-1e-4 53.455039,-23.93272 53.455139,-53.45514 -1e-4,-29.522415 -23.93272,-53.455035 -53.455139,-53.455132 z m 0.287321,4.342371 c 3.234322,0.0023 6.468031,0.323934 9.637655,0.974101 11.269776,2.311703 21.642733,8.759652 28.703673,17.842321 7.06094,9.082669 10.75215,20.725869 10.21333,32.217669 -0.53881,11.4918 -5.30283,22.73844 -13.18266,31.12058 -7.87981,8.38216 -18.811128,13.83108 -30.247763,15.07815 -11.436634,1.24708 -23.285467,-1.71777 -32.786629,-8.20466 l 30.187305,-37.13262 c 0.17924,-0.22048 0.361232,-0.44086 0.575158,-0.62787 0.213927,-0.18701 0.459764,-0.3401 0.729672,-0.42891 0.269907,-0.0888 0.562124,-0.11191 0.841292,-0.0589 0.279168,0.0529 0.543833,0.18167 0.75706,0.36948 l 16.622758,13.23485 9.809737,-12.04991 -27.633456,-22.81979 -22.150069,-4.10415 c -0.514835,-0.0954 -1.03811,-0.18472 -1.559078,-0.13229 -0.520966,0.0524 -1.036011,0.25346 -1.412317,0.61754 -0.376306,0.36407 -0.599033,0.88814 -0.577225,1.41128 0.02181,0.52315 0.290014,1.03131 0.711067,1.34255 l 17.303854,15.30863 c 0.5377,0.69739 1.120851,1.32663 -0.268201,2.98173 L 43.038232,163.7952 c -5.303951,-5.1178 -9.424706,-11.45429 -11.951209,-18.3782 -3.943571,-10.80741 -3.894992,-23.0215 0.133842,-33.79742 4.028834,-10.77591 12.005077,-20.025913 22.071521,-25.59534 7.235256,-4.003026 15.507737,-6.081074 23.773226,-6.075081 z"/>
+        </g>
+        <path fill="#283618" stroke="#000" stroke-width="0.661" stroke-linecap="round" stroke-linejoin="round" d="m 98.293674,67.77999 c 0.72611,6.53528 0.49206,11.63639 3.848116,16.82905 -2.08841,-0.097 -4.176828,-0.45317 -6.265238,-3.50854 -1.88933,8.92741 -1.44858,12.35716 1.70511,17.2187 -2.51304,-2.05417 -7.17619,-4.77602 -6.88696,-3.15742 1.73024,9.68293 -1.2748,28.54956 -3.088258,31.92556 C 86.6096,104.78877 80.422478,98.22809 75.702495,115.93522 73.999828,110.54462 73.337863,102.35347 73.51923,96.94458 73.6967,91.65191 69.651464,92.7731 68.058905,104.40718 61.576322,98.85413 64.513557,90.97746 64.299765,83.85721 61.746978,83.35536 61.209874,88.79846 59.9141,91.12488 58.124792,88.54867 56.737065,85.06827 58.455397,80.25992 L 68.957912,67.341 l 1.305033,-1.05672 1.598203,0.31046 16.622738,13.23477 z"/>
+      </svg>
+    </button>
+    <button id="help-btn">?</button>
+  </div>
+  <div id="decode-strip">
+    <button id="strip-toggle">the inscription <span id="strip-arrow"></span></button>
+    <div id="mobile-decode-wrap"></div>
+    <div id="progress-bar"><div id="progress-fill"></div></div>
+  </div>
+  <div id="mobile-fog">
+    <div class="fog-row">
+      <button class="fog-btn active" data-fog="0">sunlit</button>
+      <button class="fog-btn" data-fog="3">mist</button>
+      <button class="fog-btn" data-fog="2.2">dusk</button>
+      <button class="fog-btn" data-fog="1.4">night</button>
+      <button class="fog-btn" data-fog="-1">midnight</button>
+    </div>
+  </div>
+  <div id="desktop-layout">
+    <div>
+      <div id="canvas-outer">
+        <canvas id="maze" tabindex="0"></canvas>
+        <div id="canvas-passage" class="open"><span>-</span></div>
+      </div>
+    </div>
+    <div id="sidebar">
+      <div class="panel">
+        <div class="panel-title">the path</div>
+        <div id="sidebar-steps">0</div>
+        <div id="sidebar-steps-label">steps taken</div>
+        <div id="sidebar-room">clearing <span id="sidebar-room-cur">1</span> of <span id="sidebar-room-tot">1</span></div>
+        <div id="room-map"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">the inscription</div>
+        <div id="sidebar-decode-wrap"></div>
+        <div id="sidebar-progress-bar"><div id="sidebar-progress-fill"></div></div>
+      </div>
+      <div class="panel" id="inventory-panel" style="display:none">
+        <div class="panel-title">carried keys</div>
+        <div id="inventory-display"></div>
+      </div>
+      <div class="panel" id="canopy-panel">
+        <div class="panel-title">canopy</div>
+        <div class="fog-row">
+          <button class="fog-btn active" data-fog="0">sunlit</button>
+          <button class="fog-btn" data-fog="3">mist</button>
+          <button class="fog-btn" data-fog="2.2">dusk</button>
+          <button class="fog-btn" data-fog="1.4">night</button>
+          <button class="fog-btn" data-fog="-1">midnight</button>
+        </div>
+      </div>
+      <div class="panel" id="instructions-panel">
+        <div class="panel-title">wayfinding</div>
+        <div class="wf-row"><span class="wf-input">arrows</span><span class="wf-action">wander</span></div>
+        <div class="wf-row"><span class="wf-input">arrow into door</span><span class="wf-action">pass through</span></div>
+        <div class="wf-row"><span class="wf-input">arrow at threshold</span><span class="wf-action">retreat</span></div>
+        <div class="wf-row"><span class="wf-enter">Enter</span><span class="wf-action">take key</span></div>
+      </div>
+    </div>
+  </div>
+  <div id="victory">
+    <div id="victory-header">- the inscription reveals itself -</div>
+    <div id="victory-ornament">* * *</div>
+    <div id="victory-msg"></div>
+    <div id="victory-stats"></div>
+    <div id="victory-actions">
+      <button id="share-btn">share this scroll</button>
+      <button id="replay-btn">wander again</button>
+      <div id="replay-canopy-section">
+        <div id="replay-canopy-label" style="font-size:10px;color:var(--text3);letter-spacing:.18em;text-transform:uppercase;margin-bottom:8px">canopy</div>
+        <div class="fog-row">
+          <button class="fog-btn" data-fog="0">sunlit</button>
+          <button class="fog-btn" data-fog="3">mist</button>
+          <button class="fog-btn" data-fog="2.2">dusk</button>
+          <button class="fog-btn" data-fog="1.4">night</button>
+          <button class="fog-btn" data-fog="-1">midnight</button>
+        </div>
+        <button id="replay-go">set out</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const VALID=
+  `abcdefghijklmnopqrstuvwxyz0123456789 .,!?\x27\x22()-:;`+ // base 48 — must stay first, order is encoding contract (\x27=’ \x22=”)
+  `#$%&*/+<=>@[\\]^_\`{|}~`+                               // remaining printable ASCII (backtick escaped as \`)
+  `\xdf\xe0\xe1\xe2\xe3\xe4\xe5\xe6\xe7\xe8\xe9\xea\xeb\xec\xed\xee\xef\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff`+ // Latin-1 lowercase: \xdf=ß \xe0-\xf6=à-ö \xf8-\xff=ø-ÿ (skipping \xf7=÷)
+  `—–…‘’“”\xa1\xbf\xab\xbb`; // —=— –=– …=… ‘=’ ’=’ “=” ”=” \xa1=¡ \xbf=¿ \xab=« \xbb=»
+const BOUNDARY=new Set([`.`,`!`,`?`,`;`,`,`,`\x27`]);
+const LOCK_FOR={
+  [`,`]:`collect`,
+  [`\x27`]:`collect`,
+  [`:`]:`collect`,
+  [`;`]:`key_prior`,
+  [`.`]:`key_prior`,
+  [`!`]:`key_prior`,
+  [`?`]:`key_prior`,
+};
+// Aside-chain pairs: text enclosed in these creates a separate room chain
+const ASIDE_PAIRS={
+  [`\x28`]:`\x29`,   // ()
+  [`[`]:`]`,          // []
+  [`{`]:`}`,          // {}
+  [`<`]:`>`,          // <>
+  [`\xab`]:`\xbb`,   // «»
+  [`“`]:`”`, // “” (curly double quotes)
+  [`\x22`]:`\x22`,   // "" straight (symmetric open=close)
+};
+const ASIDE_OPEN_SET=new Set(Object.keys(ASIDE_PAIRS));
+const ASIDE_SYM_SET=new Set([`\x22`]);
+const URL_ALPHA='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+const CANOPY_LEVELS=[0,3,2.2,1.4,-1]; // indices 0–4 map to fogRadius values
+
+function encodeMessage(str){
+  const base=BigInt(VALID.length+1); // 1-indexed to preserve leading chars
+  let n=0n;
+  for(let i=0;i<str.length;i++) n=n*base+BigInt(VALID.indexOf(str[i])+1);
+  const b62=BigInt(URL_ALPHA.length);
+  if(n===0n)return URL_ALPHA[0];
+  let out='';
+  while(n>0n){out=URL_ALPHA[Number(n%b62)]+out;n/=b62;}
+  return out;
+}
+
+function decodeMessage(enc){
+  const b62=BigInt(URL_ALPHA.length);
+  let n=0n;
+  for(const ch of enc){const i=URL_ALPHA.indexOf(ch);if(i<0)return null;n=n*b62+BigInt(i);}
+  const base=BigInt(VALID.length+1);
+  let out='';
+  while(n>0n){out=VALID[Number(n%base)-1]+out;n/=base;}
+  return out||null;
+}
+
+function getCanopyIdx(){
+  const i=CANOPY_LEVELS.indexOf(fogRadius);
+  return i>=0?i:0;
+}
+
+function applyCanopy(idx){
+  fogRadius=CANOPY_LEVELS[idx]??0;
+  document.querySelectorAll('.fog-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll(`.fog-btn[data-fog="${fogRadius}"]`).forEach(b=>b.classList.add('active'));
+}
+
+const COLS=12,ROWS=12;
+let CELL=36;
+let rooms=[],currentRoom=0,steps=0,fogRadius=0;
+let globalFound=new Set();
+let onDoor=false,onEntrance=false,hasLeftEntrance=false;
+let inAside=false,asideChainIdx=0,asideRoomIdx=0;
+let inventory=[];
+let pulseT=0,isMobile=false;
+
+// ── Raven SVG — preloaded as image for canvas drawing ─────────────────────────
+// Public domain silhouette from openclipart.org by rones
+const RAVEN_SVG=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 750 573.07"><g transform="translate(265.71 313.77)"><path fill="#ffffff" d="m316.5-313.77c-1.12 0.02-2.24 0.11-3.36 0.19-20.98 1.59-40.88 11.1-59.66 20.57-10.8 5.45-20.48 13.75-27.72 23.43-13.4 17.92-15.44 44.85-33.37 58.23-29.18 21.77-67.09 28.38-100.87 41.95-32.047 12.88-56.453 24.11-101.55 36.24-30.317 8.15-58.705 22.24-88.063 33.369 17.52-2.369 34.996-4.779 52.515-7.149-14.679 6.63-29.296 13.319-44 19.889-18.682 8.345-37.122 17.262-56.122 24.859-15.36 6.146-31.13 11.203-46.86 16.345-8.9 2.91-18.53 2.243-27.53 4.848 9.71-0.947 19.94 1.071 29.65 0.124-5.92 2.841-11.86 5.673-17.78 8.514l17.78 4.289c-13.97 4.498-28.04 8.649-41.89 13.486-11.25 3.926-22.25 8.5405-33.38 12.802l23.43 5.6556c-3.78 5.9188-11.17 10.749-11.37 17.774-0.12 4.402 6.24 7.479 10.63 7.83 14.21 1.137 28.65-0.791 42.63-3.542 29.47-5.797 57.72-17.344 87.38-22.062 12.41-1.9751 25.208 0.086 37.601 2.1747 8.859 1.4931 16.919 6.2173 25.605 8.5143 19.987 5.286 40.222 9.435 60.346 14.17l-12.057 8.514c3.3148 0.71 6.6292 1.465 9.9438 2.175-5.682 2.131-11.346 4.271-17.028 6.401l29.084 2.113c-5.208 2.368-10.39 4.718-15.598 7.085 8.522 1.184 16.954 3.006 25.542 3.543 17.965 1.122 36.013 0.956 54.007 1.429-3.315 12.548-12.281 31.355-6.961 43.189 5.079 11.31 4.714 15.46 9.819 22.87 1.668 2.43 4.938 3.89 8.266 4.17l16.34 29.64 13.55 28.59c-18.9-2.91-23.25-6.05-38.653 3.05l14.603-0.5c3.82 9.43 17.92 3.89 26.1 9.01 0 0 9.36 3.63 12.06 7.52 6.19 21.78 20.34 19.68 27.59 40.71 5.33 5.05 10.11 4.7 17.09 5.03l4.54 6.03-4.54-12.55-11.55-19.58c8.95-0.52 14.78-0.37 25.04 3.17 8.09 2.79 20.27 8.82 29.71 10.38l5.53 7.52-3.05-12.06-21.06-13.55s-14.07-3.54-12.06-3.54c7.19-0.36 12.51-3.06 20.57-2.74 9.66 0.4 21.94 3.64 28.15-0.24l6.53 1.49s-12.18-5.97-17.59-7.52c-10.94-3.15-13.56-1.49-31.14-1.99-17.57-0.5-23.64 5.47-34.11 0.99-24.7-20.83-46.41-56.32-60.04-87.07 0.03-0.03 0.04-0.08 0.06-0.12 6.87-1.18 13.83-1.51 20.76-2.24 3.35-0.35 6.7-1.05 10.07-0.99 15.2 0.25 29.99 6.68 45.18 6.03 3.08-0.14 5.99-1.81 9.07-1.99 3.36-0.2 10.01 0.99 10.01 0.99s-10.7-5.86-16.53-7.52c-7.63-2.17-20.08 4.06-23.62-3.04-0.6-1.21 0.86-2.75 1.99-3.48 5.79-3.75 13.68-1.95 20.57-2.05 5.03-0.08 10.18-0.05 15.1 0.99 1.92 0.4 5.53 2.05 5.53 2.05s-6.38-8.37-11.06-10.07c-10.87-3.93-24.42 6.84-34.68 1.5-1.93-1.01-3.93-3.338-3.48-5.474 1-4.725 7.59-6.258 12.06-8.079 2.52-1.028 8.02-1.492 8.02-1.492s-5.45-3.748-8.52-3.542c-7.33 0.493-11.81 9.971-19.08 11.062-2.21 0.332-4.76-0.209-6.58-1.491-5.56-3.893-7.85-11.092-11-17.091-1.7-3.223-3.61-7.636-5.47-12.119 4.86-3.08 10.6-5.229 15.1-8.825 8.77-7.014 14.68-18.003 24.86-22.746 14.99-6.986 33.09-4.783 48.29-11.311 18.84-8.093 35.99-19.946 52.57-32.006 14.79-10.755 31.93-20.474 41.21-36.232 11.22-19.058 11.21-42.751 17.71-63.884 5.81-18.9 14.45-36.94 19.2-56.12 2.17-8.75-1.96-18.63 1.43-26.98 3.6-8.87 10.67-16.49 18.46-22.06 9.23-6.59 20.04-11.78 31.26-13.48 25.06-3.82 50.66-3.01 76.01-2.8 3.74 0.03 7.07 2.36 10.62 3.54-3.87-31.74-69.6-46.18-105.83-62.52-4.91-2.26-7.63-8.22-12.74-9.94-15.97-5.38-32.46-12.5-49.22-12.25zm34.24 46.3c5.08 0 9.2 4.12 9.2 9.2s-4.12 9.26-9.2 9.26-9.26-4.18-9.26-9.26 4.18-9.2 9.26-9.2zm0 2.37c-3.79 0-6.84 3.04-6.84 6.83s3.05 6.84 6.84 6.84 6.84-3.04 6.84-6.84c0-3.79-3.05-6.83-6.84-6.83zm1.24 2.3c1.39 0 2.49 1.16 2.49 2.54 0 1.39-1.1 2.49-2.49 2.49-1.38 0-2.48-1.1-2.48-2.49 0-1.38 1.1-2.54 2.48-2.54zm-232.49 334.97c2.98 7.131 6.34 15.69 7.52 22.373 0.72 4.122 2.33 9.085 0 12.555-2.75 4.08-7.89 5.06-13.12 6.03 0.66-1.61 1.27-3.26 1.81-4.85 1.82-5.39-1.57-11.401-0.75-17.029 0.93-6.404 1.55-13.4 4.54-19.079z"/></g></svg>`;
+// White fill so we can tint it on canvas
+const RAVEN_URL='data:image/svg+xml;base64,'+btoa(RAVEN_SVG);
+let ravenImg=null;
+let ravenCache=null; // {C, main, outline} — rebuilt on CELL change
+(function preloadRaven(){
+  const img=new Image();
+  img.onload=()=>{ravenImg=img;ravenCache=null;};
+  img.src=RAVEN_URL;
+})();
+
+function setupCanvas(){
+  isMobile=window.innerWidth<=600;
+  const cv=document.getElementById('maze');
+  // 15 cols: mobile needs ~28px min to fit, desktop can go up to ~44px
+  CELL=isMobile
+    ?Math.floor((Math.min(window.innerWidth,500)-20)/COLS)  // fills phone width
+    :Math.min(44,Math.floor((Math.min(window.innerWidth,820)-280)/COLS)); // sidebar ~240px
+  CELL=Math.max(26,CELL); // floor at 26px — 15*26=390px fits smallest phones
+  cv.width=COLS*CELL;cv.height=ROWS*CELL;
+}
+
+function rng(seed){let s=seed>>>0;return()=>{s=(Math.imul(1664525,s)+1013904223)>>>0;return s/0x100000000};}
+function hash(str){let h=5381;for(let i=0;i<str.length;i++)h=(Math.imul(31,h)+str.charCodeAt(i))|0;return h>>>0;}
+
+const MIN_SEG=8; // minimum chars before a boundary creates a new room
+let currentMsg='';
+
+function isApostrophe(str,i){
+  if(str[i]!==`\x27`)return false;
+  const before=i>0&&/\p{L}/u.test(str[i-1]);
+  const after=i<str.length-1&&/\p{L}/u.test(str[i+1]);
+  return before&&after;
+}
+function isApostropheInArr(chars,i){
+  if(chars[i].char!==`\x27`)return false;
+  const before=i>0&&/\p{L}/u.test(chars[i-1].char);
+  const after=i<chars.length-1&&/\p{L}/u.test(chars[i+1].char);
+  return before&&after;
+}
+
+function findAsideSpans(str){
+  const spans=[];
+  let i=0;
+  while(i<str.length){
+    const ch=str[i];
+    if(!ASIDE_OPEN_SET.has(ch)){i++;continue;}
+    const closeChar=ASIDE_PAIRS[ch];
+    let j=i+1;
+    while(j<str.length&&str[j]!==closeChar)j++;
+    if(j<str.length&&j>i+1){
+      spans.push({start:i,end:j,openChar:ch,closeChar});
+      i=j+1;
+    } else {
+      i++;
+    }
+  }
+  return spans;
+}
+
+function parseChars(charObjs){
+  const rawSegs=[];
+  let buf=[];
+  for(let i=0;i<charObjs.length;i++){
+    const isBound=BOUNDARY.has(charObjs[i].char)&&!isApostropheInArr(charObjs,i);
+    const nb=i+1<charObjs.length&&BOUNDARY.has(charObjs[i+1].char)&&!isApostropheInArr(charObjs,i+1);
+    if(isBound&&nb){buf.push(charObjs[i]);}
+    else if(isBound&&!nb){buf.push(charObjs[i]);rawSegs.push({chars:[...buf],bcharObj:buf[buf.length-1]});buf=[];}
+    else buf.push(charObjs[i]);
+  }
+  if(buf.length)rawSegs.push({chars:buf,bcharObj:null});
+
+  const merged=[];
+  for(const raw of rawSegs){
+    const contentLen=raw.bcharObj?raw.chars.length-1:raw.chars.length;
+    if(contentLen>0&&contentLen<MIN_SEG&&merged.length>0){
+      const prev=merged[merged.length-1];
+      prev.chars=[...prev.chars,...raw.chars];
+      prev.bcharObj=raw.bcharObj;
+    } else {
+      merged.push({chars:[...raw.chars],bcharObj:raw.bcharObj});
+    }
+  }
+
+  const final=[];
+  function makeRoomSeg(chars,bcharObj,ov){
+    const contentChars=bcharObj?chars.slice(0,-1):chars;
+    const content=contentChars.map(c=>c.char).join(``);
+    const segChars=contentChars.map(c=>({char:c.char,globalIdx:c.gIdx}));
+    const bc=bcharObj?bcharObj.char:null;
+    const bGIdx=bcharObj?bcharObj.gIdx:null;
+    final.push({content,chars:segChars,boundaryChar:bc,boundaryGlobalIdx:bGIdx,
+      lockType:bc?(LOCK_FOR[bc]||`none`):`none`,overflow:ov,autoCollect:false,asideChains:[]});
+  }
+  for(const raw of merged){
+    const bcharObj=raw.bcharObj;
+    const contentChars=bcharObj?raw.chars.slice(0,-1):raw.chars;
+    if(contentChars.length===0){
+      if(bcharObj)final.push({content:``,chars:[],boundaryChar:bcharObj.char,boundaryGlobalIdx:bcharObj.gIdx,
+        lockType:`none`,overflow:false,autoCollect:true,asideChains:[]});
+      continue;
+    }
+    if(contentChars.length<=40)makeRoomSeg(raw.chars,bcharObj,false);
+    else{
+      const h=Math.ceil(contentChars.length/2);
+      makeRoomSeg(contentChars.slice(0,h),null,true);
+      makeRoomSeg(contentChars.slice(h).concat(bcharObj?[bcharObj]:[]),bcharObj,false);
+    }
+  }
+  return final;
+}
+
+function parseMessage(str){
+  const asideSpans=findAsideSpans(str);
+  const asideAllPos=new Set();
+  asideSpans.forEach(s=>{for(let k=s.start;k<=s.end;k++)asideAllPos.add(k);});
+
+  const mainChars=[];
+  for(let i=0;i<str.length;i++){
+    if(!asideAllPos.has(i))mainChars.push({char:str[i],gIdx:i});
+  }
+  const mainSegs=parseChars(mainChars);
+  if(!mainSegs.length)return [];
+
+  asideSpans.forEach(span=>{
+    const inner=[];
+    for(let k=span.start+1;k<span.end;k++)inner.push({char:str[k],gIdx:k});
+    if(!inner.length)return;
+    const asideSegs=parseChars(inner);
+    if(!asideSegs.length)return;
+    // Override key locks — aside chains have no keys
+    asideSegs.forEach(s=>{if(s.lockType===`key_here`||s.lockType===`key_prior`)s.lockType=`collect`;});
+    // Attach to last main segment whose max gIdx < span.start
+    let targetIdx=0;
+    for(let si=0;si<mainSegs.length;si++){
+      const seg=mainSegs[si];
+      const idxs=seg.chars.map(c=>c.globalIdx);
+      if(seg.boundaryGlobalIdx!=null)idxs.push(seg.boundaryGlobalIdx);
+      if(idxs.length&&Math.max(...idxs)<span.start)targetIdx=si;
+    }
+    mainSegs[targetIdx].asideChains.push({
+      openChar:span.openChar,closeChar:span.closeChar,
+      openGIdx:span.start,closeGIdx:span.end,
+      segments:asideSegs
+    });
+  });
+
+  return mainSegs;
+}
+
+function buildMaze(seed){
+  const r=rng(seed);
+  const w=Array.from({length:ROWS},()=>Array.from({length:COLS},()=>({R:true,D:true})));
+  const vis=Array.from({length:ROWS},()=>Array(COLS).fill(false));
+  const stack=[[0,0]];vis[0][0]=true;
+  const dirs=[[0,1,'R',false],[1,0,'D',false],[0,-1,'R',true],[-1,0,'D',true]];
+  while(stack.length){
+    const[cr,cc]=stack[stack.length-1];const nb=[];
+    for(const[dr,dc,wall,rev]of dirs){const nr=cr+dr,nc=cc+dc;if(nr>=0&&nr<ROWS&&nc>=0&&nc<COLS&&!vis[nr][nc])nb.push([nr,nc,wall,rev,cr,cc]);}
+    if(!nb.length){stack.pop();continue;}
+    const[nr,nc,wall,rev,pr,pc]=nb[Math.floor(r()*nb.length)];
+    vis[nr][nc]=true;if(rev)w[nr][nc][wall]=false;else w[pr][pc][wall]=false;
+    stack.push([nr,nc]);
+  }
+  return w;
+}
+function carveEntrance(maze,ew,ec){
+  if(!ew)return;
+  if(ew==='top')maze[ec.r][ec.c].D=false;
+  else if(ew==='bottom'&&ec.r>0)maze[ec.r-1][ec.c].D=false;
+  else if(ew==='left')maze[ec.r][ec.c].R=false;
+  else if(ew==='right'&&ec.c>0)maze[ec.r][ec.c-1].R=false;
+}
+function assignLetters(chars,seed,excludeCells=new Set()){
+  if(!chars.length)return{};
+  const r=rng(seed^0xdeadbeef);
+  const cells=[];
+  for(let row=0;row<ROWS;row++)for(let col=0;col<COLS;col++){
+    if(!excludeCells.has(`${row}_${col}`))cells.push([row,col]);
+  }
+  for(let i=cells.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[cells[i],cells[j]]=[cells[j],cells[i]];}
+  const map={};
+  for(let i=0;i<chars.length;i++){const[row,col]=cells[i];map[`${row}_${col}`]={char:chars[i].char,globalIdx:chars[i].globalIdx,found:false};}
+  return map;
+}
+function doorPos(seed,excludeWall,excludeCell){
+  const r=rng(seed^0xc0ffee);
+  const walls=['top','bottom','left','right'].filter(w=>w!==excludeWall);
+  let wall,pos,attempts=0;
+  do{wall=walls[Math.floor(r()*walls.length)];pos=Math.floor(r()*COLS);attempts++;}
+  while(excludeCell&&cellOf(wall,pos).r===excludeCell.r&&cellOf(wall,pos).c===excludeCell.c&&attempts<20);
+  return{wall,pos};
+}
+function cellOf(wall,pos){
+  if(wall==='top')return{r:0,c:pos};if(wall==='bottom')return{r:ROWS-1,c:pos};
+  if(wall==='left')return{r:pos,c:0};return{r:pos,c:COLS-1};
+}
+function opposite(wall){return{top:'bottom',bottom:'top',left:'right',right:'left'}[wall];}
+
+// ── Key colors ────────────────────────────────────────────────────────────────
+const KEY_COLORS=['#e0a030','#30b8a0','#9060d0','#d06080']; // amber, teal, violet, rose
+const KEY_COLORS_DIM=['rgba(80,60,20,0.5)','rgba(20,60,55,0.5)','rgba(45,25,70,0.5)','rgba(70,25,40,0.5)'];
+const KEY_COLORS_NAMES=['amber','teal','violet','rose'];
+const KEY_COLORS_RGB=['224,160,48','48,184,160','144,96,208','208,96,128'];
+function keyColorRGB(idx){return KEY_COLORS_RGB[idx%KEY_COLORS_RGB.length];}
+
+// ── Alcove constants ──────────────────────────────────────────────────────────
+const ACOLS=7,AROWS=7;
+
+// ── Build alcove maze ─────────────────────────────────────────────────────────
+function buildAlcoveMaze(seed){
+  const r=rng(seed^0xa1c0be);
+  const w=Array.from({length:AROWS},()=>Array.from({length:ACOLS},()=>({R:true,D:true})));
+  const vis=Array.from({length:AROWS},()=>Array(ACOLS).fill(false));
+  const stack=[[0,0]];vis[0][0]=true;
+  const dirs=[[0,1,'R',false],[1,0,'D',false],[0,-1,'R',true],[-1,0,'D',true]];
+  while(stack.length){
+    const[cr,cc]=stack[stack.length-1];const nb=[];
+    for(const[dr,dc,wall,rev]of dirs){const nr=cr+dr,nc=cc+dc;if(nr>=0&&nr<AROWS&&nc>=0&&nc<ACOLS&&!vis[nr][nc])nb.push([nr,nc,wall,rev,cr,cc]);}
+    if(!nb.length){stack.pop();continue;}
+    const[nr,nc,wall,rev,pr,pc]=nb[Math.floor(r()*nb.length)];
+    vis[nr][nc]=true;if(rev)w[nr][nc][wall]=false;else w[pr][pc][wall]=false;
+    stack.push([nr,nc]);
+  }
+  return w;
+}
+
+function canMoveAlcove(maze,r,c,dr,dc){
+  const nr=r+dr,nc=c+dc;
+  if(nr<0||nr>=AROWS||nc<0||nc>=ACOLS)return false;
+  if(dr===0&&dc===1)return!maze[r][c].R;
+  if(dr===0&&dc===-1)return!maze[r][nc].R;
+  if(dr===1)return!maze[r][c].D;
+  if(dr===-1)return!maze[nr][c].D;
+  return false;
+}
+
+// ── Alcove generation ─────────────────────────────────────────────────────────
+// Returns null or {maze, openWall, openPos, letterCells, key}
+// key: null | {colorIdx, forRoom (index into rooms array), discovered, active, collected}
+function generateAlcove(roomSeed,roomIdx,chars){
+  const r=rng(roomSeed^0xa1c0be);
+  if(r()>0.4)return null;
+
+  const alcoveSeed=roomSeed^0xf04e57;
+  const maze=buildAlcoveMaze(alcoveSeed);
+
+  const walls=['bottom','left','right','top'];
+  const openWall=walls[Math.floor(r()*walls.length)];
+  const wallLen=(openWall==='bottom'||openWall==='top')?ACOLS:AROWS;
+  const openPos=1+Math.floor(r()*(wallLen-2));
+
+  let alcoveChars=[];
+  if(r()>0.25&&chars.length>0){
+    const take=Math.min(3,Math.floor(r()*3)+1);
+    // Exclude spaces — they render as nothing and confuse players
+    const validChars=chars.filter(c=>c.char!==' ');
+    alcoveChars=validChars.slice(Math.max(0,validChars.length-take));
+  }
+
+  const alcoveCells=[];
+  for(let row=0;row<AROWS;row++)for(let col=0;col<ACOLS;col++)alcoveCells.push([row,col]);
+  const ar=rng(alcoveSeed^0x1e77e4);
+  for(let i=alcoveCells.length-1;i>0;i--){const j=Math.floor(ar()*(i+1));[alcoveCells[i],alcoveCells[j]]=[alcoveCells[j],alcoveCells[i]];}
+
+  const alcoveLetterCells={};
+  for(let i=0;i<alcoveChars.length;i++){
+    const[row,col]=alcoveCells[i];
+    alcoveLetterCells[`${row}_${col}`]={char:alcoveChars[i].char,globalIdx:alcoveChars[i].globalIdx,found:false};
+  }
+
+  return{maze,openWall,openPos,letterCells:alcoveLetterCells,key:null,
+    playerInAlcove:false,playerRow:0,playerCol:0,visited:new Set()};
+}
+
+// ── Alcove opening carver ─────────────────────────────────────────────────────
+function carveAlcoveOpening(mainMaze,alcove,entranceWall,exitDoor){
+  const exitWall=exitDoor?exitDoor.wall:null;
+  // If the seeded wall is blocked, pick the first available wall
+  const preferred=['bottom','left','right','top'];
+  let wall=alcove.openWall;
+  if(wall===entranceWall||wall===exitWall){
+    wall=preferred.find(w=>w!==entranceWall&&w!==exitWall)||'bottom';
+    alcove.openWall=wall; // update so rendering matches
+  }
+  const pos=alcove.openPos;
+  if(wall==='bottom'){
+    mainMaze[ROWS-1][Math.min(pos,COLS-1)].D=false;
+  } else if(wall==='left'){
+    mainMaze[Math.min(pos,ROWS-1)][0].R=false;
+  } else if(wall==='right'){
+    mainMaze[Math.min(pos,ROWS-1)][COLS-1].R=false;
+  } else if(wall==='top'){
+    mainMaze[0][Math.min(pos,COLS-1)].D=false;
+  }
+}
+
+// ── Alcove canvas offset ──────────────────────────────────────────────────────
+function alcoveCanvasOffset(alcove){
+  const{openWall,openPos}=alcove;
+  const C=CELL,AC=Math.floor(C*0.8);
+  if(openWall==='bottom'){
+    const col=Math.min(openPos,COLS-1);
+    return{x:col*C-Math.floor(ACOLS*AC/2)+C/2,y:ROWS*C+4,cellSize:AC};
+  } else if(openWall==='right'){
+    const row=Math.min(openPos,ROWS-1);
+    return{x:COLS*C+4,y:row*C-Math.floor(AROWS*AC/2)+C/2,cellSize:AC};
+  } else {
+    const row=Math.min(openPos,ROWS-1);
+    return{x:-ACOLS*AC-4,y:row*C-Math.floor(AROWS*AC/2)+C/2,cellSize:AC};
+  }
+}
+
+
+function buildAsideRoomChain(asideMeta,parentRoomIdx,chainIdx){
+  const asideRooms=[];
+  let prevExitDoor=null,prevExitWall=null;
+  for(let i=0;i<asideMeta.segments.length;i++){
+    const seg=asideMeta.segments[i];
+    if(seg.autoCollect||seg.content.length===0)continue;
+    const isAsideLast=asideMeta.segments.slice(i+1).filter(s=>!s.autoCollect&&s.content.length>0).length===0;
+    const seed=hash(seg.content+(parentRoomIdx+`a`+chainIdx+i));
+    const entranceWall=prevExitWall?opposite(prevExitWall):null;
+    const entranceCell=entranceWall&&prevExitDoor?cellOf(entranceWall,prevExitDoor.pos):{r:0,c:0};
+    const exitDoor=doorPos(seed^(isAsideLast?0xba5e:0),entranceWall,entranceCell);
+    const maze=buildMaze(seed);
+    carveEntrance(maze,entranceWall,entranceCell);
+    const player={r:entranceCell.r,c:entranceCell.c,visited:new Set([`${entranceCell.r}_${entranceCell.c}`])};
+    const mainChars=seg.chars.filter(c=>c.char!==` `);
+    const letterCells=assignLetters(mainChars,seed);
+    asideRooms.push({seg,maze,letterCells,exitDoor,entranceWall,entranceCell,
+      player,foundLocal:new Set(),isLast:false,isAsideRoom:true,isAsideLast,
+      alcove:null,keyColorIdx:-1,needsKey:false,doorPassed:false,pulseFrames:{},floorKeys:[]});
+    prevExitDoor=exitDoor;prevExitWall=exitDoor?exitDoor.wall:null;
+  }
+  return asideRooms;
+}
+
+function buildRooms(segments){
+  const built=[];let prevExitDoor=null,prevExitWall=null;
+  let keyColorIdx=0;
+
+  // Pass 1: build room shells with mazes and door positions
+  for(let i=0;i<segments.length;i++){
+    const seg=segments[i];
+    if(seg.autoCollect||seg.content.length===0)continue;
+    const roomIdx=built.length;
+    const seed=hash(seg.content+(i+''));
+    const entranceWall=prevExitWall?opposite(prevExitWall):null;
+    const entranceCell=entranceWall&&prevExitDoor?cellOf(entranceWall,prevExitDoor.pos):{r:0,c:0};
+    const isLast=segments.slice(i+1).filter(s=>!s.autoCollect&&s.content.length>0).length===0;
+    const exitDoor=isLast?null:doorPos(seed,entranceWall,entranceCell);
+    const needsKey=seg.lockType==='key_here'||seg.lockType==='key_prior';
+    const thisKeyColorIdx=needsKey?(keyColorIdx++%KEY_COLORS.length):-1;
+    const maze=buildMaze(seed);
+    carveEntrance(maze,entranceWall,entranceCell);
+    const player={r:entranceCell.r,c:entranceCell.c,visited:new Set([`${entranceCell.r}_${entranceCell.c}`])};
+    built.push({seg,maze,letterCells:{},exitDoor,entranceWall,entranceCell,
+      player,foundLocal:new Set(),isLast,alcove:null,
+      keyColorIdx:thisKeyColorIdx,needsKey,doorPassed:false,pulseFrames:{},floorKeys:[]});
+    prevExitDoor=exitDoor;prevExitWall=exitDoor?exitDoor.wall:null;
+  }
+
+  // Pass 2: plan key placements
+  // keyPlacements[roomIdx] = [{colorIdx, forRoom}, ...] — all keys housed in that room
+  const keyPlacements={};
+  function kpPush(target,instr){
+    if(!keyPlacements[target])keyPlacements[target]=[];
+    keyPlacements[target].push(instr);
+  }
+  built.forEach((room,idx)=>{
+    if(!room.needsKey||room.keyColorIdx<0||room.isLast)return;
+    const r=rng(hash(room.seg.content+(idx+'key'))^0xdec1de);
+    const canPrior=idx>0;
+    const doPrior=canPrior&&r()>0.5;
+    if(doPrior){
+      const maxBack=Math.min(idx,3);
+      const backBy=1+Math.floor(r()*maxBack);
+      const target=Math.max(0,idx-backBy);
+      kpPush(target,{colorIdx:room.keyColorIdx,forRoom:idx});
+    } else {
+      kpPush(idx,{colorIdx:room.keyColorIdx,forRoom:idx});
+    }
+  });
+
+  // Pass 3: generate alcoves (natural probability only) and assign keys
+  built.forEach((room,idx)=>{
+    const seed=hash(room.seg.content+(idx+''));
+    const keyInstrs=keyPlacements[idx]||[];
+
+    // Generate alcove at natural 40% probability — no forcing
+    // Pass key instruction only if alcove is generated; otherwise key goes in main room
+    const alcove=generateAlcove(seed,idx,room.seg.chars,null); // no key in alcove yet
+    if(alcove)carveAlcoveOpening(room.maze,alcove,room.entranceWall,room.exitDoor);
+    room.alcove=alcove;
+
+    // Build aside chains — carve openings on walls not already claimed
+    room.asideChains=[];
+    if(room.seg.asideChains&&room.seg.asideChains.length){
+      const usedWalls=new Set();
+      if(room.entranceWall)usedWalls.add(room.entranceWall);
+      if(room.exitDoor)usedWalls.add(room.exitDoor.wall);
+      if(alcove)usedWalls.add(alcove.openWall);
+      room.seg.asideChains.forEach((asideMeta,ci)=>{
+        const arooms=buildAsideRoomChain(asideMeta,idx,ci);
+        if(!arooms.length)return;
+        const walls=[`top`,`bottom`,`left`,`right`].filter(w=>!usedWalls.has(w));
+        if(!walls.length)return;
+        const wr=rng(hash(room.seg.content+(idx+`aw`+ci)));
+        const aw=walls[Math.floor(wr()*walls.length)];
+        usedWalls.add(aw);
+        const maxPos=(aw===`top`||aw===`bottom`)?COLS:ROWS;
+        const pr=rng(hash(room.seg.content+(idx+`ap`+ci)));
+        const ap=1+Math.floor(pr()*(maxPos-2));
+        const fakeAlc={openWall:aw,openPos:ap};
+        carveAlcoveOpening(room.maze,fakeAlc,room.entranceWall,room.exitDoor);
+        room.asideChains.push({...asideMeta,rooms:arooms,openWall:fakeAlc.openWall,openPos:ap,isComplete:false});
+      });
+    }
+
+    const alcoveCharIdxs=new Set(alcove?Object.values(alcove.letterCells).map(lc=>lc.globalIdx):[]);
+    // Exclude aside opening cells, entrance, and exit door from letter placement
+    const excludeCells=new Set();
+    room.asideChains.forEach(ac=>{
+      const{openWall:aw,openPos:ap}=ac;
+      if(aw===`bottom`)excludeCells.add(`${ROWS-1}_${Math.min(ap,COLS-1)}`);
+      else if(aw===`right`)excludeCells.add(`${Math.min(ap,ROWS-1)}_${COLS-1}`);
+      else if(aw===`left`)excludeCells.add(`${Math.min(ap,ROWS-1)}_0`);
+      else if(aw===`top`)excludeCells.add(`0_${Math.min(ap,COLS-1)}`);
+    });
+    if(room.entranceWall)excludeCells.add(`${room.entranceCell.r}_${room.entranceCell.c}`);
+    if(room.exitDoor){const ec=cellOf(room.exitDoor.wall,room.exitDoor.pos);excludeCells.add(`${ec.r}_${ec.c}`);}
+    // Filter out spaces and alcove chars from main room letter cells
+    const mainRoomChars=room.seg.chars.filter(c=>!alcoveCharIdxs.has(c.globalIdx)&&c.char!==' ');
+    room.letterCells=assignLetters(mainRoomChars,seed,excludeCells);
+
+    // Place keys — first key may go to alcove, subsequent keys always go to floor
+    const usedMain=new Set(Object.keys(room.letterCells));
+    let alcoveUsed=false;
+    keyInstrs.forEach((keyInstr,ki)=>{
+      if(!alcoveUsed&&alcove){
+        // Put first key in alcove
+        alcoveUsed=true;
+        const ar=rng(seed^(0xb1a5e5+ki));
+        const alcoveCells=[];
+        for(let r=0;r<AROWS;r++)for(let c=0;c<ACOLS;c++)alcoveCells.push([r,c]);
+        for(let i=alcoveCells.length-1;i>0;i--){const j=Math.floor(ar()*(i+1));[alcoveCells[i],alcoveCells[j]]=[alcoveCells[j],alcoveCells[i]];}
+        const usedAlcove=new Set(Object.keys(alcove.letterCells));
+        const freeAlcove=alcoveCells.filter(([r,c])=>!usedAlcove.has(`${r}_${c}`));
+        if(freeAlcove.length>0){
+          const[kr,kc]=freeAlcove[Math.floor(ar()*freeAlcove.length)];
+          alcove.key={colorIdx:keyInstr.colorIdx,forRoom:keyInstr.forRoom,
+            row:kr,col:kc,discovered:false,active:false,collected:false,inAlcove:true};
+        }
+      } else {
+        // Put key in main room floor — exclude cells used by letters or prior floor keys
+        const mr=rng(seed^(0xb1a5e5+ki));
+        const mainCells=[];
+        for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)mainCells.push([r,c]);
+        for(let i=mainCells.length-1;i>0;i--){const j=Math.floor(mr()*(i+1));[mainCells[i],mainCells[j]]=[mainCells[j],mainCells[i]];}
+        const freeMain=mainCells.filter(([r,c])=>!usedMain.has(`${r}_${c}`));
+        if(freeMain.length>0){
+          const[kr,kc]=freeMain[Math.floor(mr()*freeMain.length)];
+          usedMain.add(`${kr}_${kc}`);
+          room.floorKeys.push({colorIdx:keyInstr.colorIdx,forRoom:keyInstr.forRoom,
+            row:kr,col:kc,discovered:false,active:false,collected:false,inAlcove:false});
+        }
+      }
+    });
+  });
+
+  return built;
+}
+
+function roomUnlocked(room){
+  if(!room.exitDoor)return true;
+  const lt=room.seg.lockType;
+  if(lt==='none'||lt==='collect'){
+    return room.seg.chars.filter(c=>globalFound.has(c.globalIdx)).length===room.seg.chars.length;
+  }
+  // Key lock — check inventory for matching color
+  if(lt==='key_here'||lt==='key_prior'){
+    return room.doorPassed||inventory.some(k=>k.colorIdx===room.keyColorIdx);
+  }
+  return true;
+}
+
+function checkVictory(){
+  for(const room of rooms){
+    if(!room.seg.autoCollect&&room.seg.chars.some(c=>!globalFound.has(c.globalIdx)))return;
+    for(const ac of (room.asideChains||[])){
+      for(const ar of ac.rooms){
+        if(ar.seg.chars.some(c=>!globalFound.has(c.globalIdx)))return;
+      }
+    }
+  }
+  // All chars found — auto-collect remaining boundary/delimiter chars
+  rooms.forEach(room=>{
+    if(room.seg.boundaryChar!=null&&room.seg.boundaryGlobalIdx!=null)globalFound.add(room.seg.boundaryGlobalIdx);
+    (room.asideChains||[]).forEach(ac=>{
+      globalFound.add(ac.openGIdx);globalFound.add(ac.closeGIdx);
+      ac.rooms.forEach(ar=>{
+        if(ar.seg.boundaryChar!=null&&ar.seg.boundaryGlobalIdx!=null)globalFound.add(ar.seg.boundaryGlobalIdx);
+      });
+    });
+  });
+  setTimeout(showVictory,400);
+}
+
+function canMoveMaze(maze,r,c,dr,dc){
+  const nr=r+dr,nc=c+dc;
+  if(nr<0||nr>=ROWS||nc<0||nc>=COLS)return false;
+  if(dr===0&&dc===1)return!maze[r][c].R;
+  if(dr===0&&dc===-1)return!maze[r][nc].R;
+  if(dr===1)return!maze[r][c].D;
+  if(dr===-1)return!maze[nr][c].D;
+  return false;
+}
+
+// Helper to get all keys in a room (alcove key + floor keys)
+function roomKeys(room){
+  const keys=[];
+  if(room.alcove?.key)keys.push(room.alcove.key);
+  keys.push(...room.floorKeys);
+  return keys;
+}
+
+function checkKeyActivations(){
+  rooms.forEach((room,idx)=>{
+    roomKeys(room).forEach(k=>{
+      if(k.collected||k.active)return;
+      if(k.forRoom===idx){
+        // Current room key — activate at >50% letters found
+        const total=room.seg.chars.length;
+        const found=room.seg.chars.filter(c=>globalFound.has(c.globalIdx)).length;
+        if(total>0&&found/total>0.5){
+          k.active=true;
+          room.pulseFrames['key_'+k.row+'_'+k.col+(k.inAlcove?'_a':'_f')]=30;
+        }
+      } else if(k.forRoom<=currentRoom){
+        // Future-room key — activate when player enters the room that needs it
+        k.active=true;
+        room.pulseFrames['key_'+k.row+'_'+k.col+(k.inAlcove?'_a':'_f')]=30;
+      }
+    });
+  });
+}
+
+function checkCell(){
+  const room=rooms[currentRoom];
+  const key=`${room.player.r}_${room.player.c}`;
+  if(room.letterCells[key]&&!room.letterCells[key].found){
+    room.letterCells[key].found=true;
+    room.foundLocal.add(room.letterCells[key].globalIdx);
+    globalFound.add(room.letterCells[key].globalIdx);
+  }
+  // Discover floor keys on contact
+  room.floorKeys.forEach(fk=>{
+    if(!fk.discovered&&!fk.collected&&fk.row===room.player.r&&fk.col===room.player.c)fk.discovered=true;
+  });
+  checkKeyActivations();
+  checkVictory();
+}
+
+function checkAlcoveCell(){
+  const room=rooms[currentRoom];
+  if(!room.alcove)return;
+  const alcove=room.alcove;
+  const pr=alcove.playerRow,pc=alcove.playerCol;
+  const key=`${pr}_${pc}`;
+  alcove.visited.add(key);
+  if(alcove.letterCells[key]&&!alcove.letterCells[key].found){
+    alcove.letterCells[key].found=true;
+    room.foundLocal.add(alcove.letterCells[key].globalIdx);
+    globalFound.add(alcove.letterCells[key].globalIdx);
+  }
+  if(alcove.key&&!alcove.key.discovered&&alcove.key.row===pr&&alcove.key.col===pc){
+    alcove.key.discovered=true;
+  }
+  checkKeyActivations();
+  checkVictory();
+}
+
+function checkAsideCell(){
+  const ac=rooms[currentRoom].asideChains[asideChainIdx];
+  const ar=ac.rooms[asideRoomIdx];
+  const key=`${ar.player.r}_${ar.player.c}`;
+  ar.player.visited.add(key);
+  if(ar.letterCells[key]&&!ar.letterCells[key].found){
+    ar.letterCells[key].found=true;
+    ar.foundLocal.add(ar.letterCells[key].globalIdx);
+    globalFound.add(ar.letterCells[key].globalIdx);
+  }
+  checkVictory();
+}
+
+// ── handleEnter: pick up key if standing on one ───────────────────────────────
+function tryPickupKey(){
+  const room=rooms[currentRoom];
+
+  // Floor keys in main room
+  const fk=room.floorKeys.find(k=>k.discovered&&k.active&&!k.collected&&
+     k.row===room.player.r&&k.col===room.player.c);
+  if(fk){
+    fk.collected=true;
+    inventory.push({colorIdx:fk.colorIdx,fromRoom:currentRoom});
+    const targetRoom=rooms[fk.forRoom];
+    if(targetRoom)targetRoom.pulseFrames['door']=30;
+    return true;
+  }
+
+  // Alcove key
+  if(room.alcove?.playerInAlcove){
+    const k=room.alcove.key;
+    if(k&&k.discovered&&k.active&&!k.collected){
+      const pr=room.alcove.playerRow,pc=room.alcove.playerCol;
+      if(k.row===pr&&k.col===pc){
+        k.collected=true;
+        inventory.push({colorIdx:k.colorIdx,fromRoom:currentRoom});
+        const targetRoom=rooms[k.forRoom];
+        if(targetRoom)targetRoom.pulseFrames['door']=30;
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function isOnEntranceCell(){
+  if(currentRoom===0)return false;
+  const room=rooms[currentRoom];
+  return room.player.r===room.entranceCell.r&&room.player.c===room.entranceCell.c;
+}
+function isOnExitDoor(){
+  const room=rooms[currentRoom];if(!room.exitDoor)return false;
+  const ec=cellOf(room.exitDoor.wall,room.exitDoor.pos);
+  return room.player.r===ec.r&&room.player.c===ec.c;
+}
+
+function handleArrow(dr,dc){
+  if(!rooms.length)return;
+  if(document.getElementById('victory').style.display==='block')return;
+  const room=rooms[currentRoom];
+
+  // ── In aside chain ──
+  if(inAside){
+    const ac=room.asideChains[asideChainIdx];
+    const ar=ac.rooms[asideRoomIdx];
+    if(canMoveMaze(ar.maze,ar.player.r,ar.player.c,dr,dc)){
+      ar.player.r+=dr;ar.player.c+=dc;
+      ar.player.visited.add(`${ar.player.r}_${ar.player.c}`);
+      steps++;checkAsideCell();render();updateHUD();return;
+    }
+    if(ar.exitDoor){
+      const ec=cellOf(ar.exitDoor.wall,ar.exitDoor.pos);
+      if(ar.player.r===ec.r&&ar.player.c===ec.c){
+        const dd={top:[-1,0],bottom:[1,0],left:[0,-1],right:[0,1]};
+        const d=dd[ar.exitDoor.wall];
+        if(d&&dr===d[0]&&dc===d[1]){
+          const unlocked=ar.seg.chars.every(c=>globalFound.has(c.globalIdx));
+          if(!unlocked){ar.pulseFrames['door']=8;render();return;}
+          if(ar.seg.boundaryChar!=null&&ar.seg.boundaryGlobalIdx!=null)globalFound.add(ar.seg.boundaryGlobalIdx);
+          if(ar.isAsideLast){
+            inAside=false;
+            globalFound.add(ac.openGIdx);globalFound.add(ac.closeGIdx);
+            ac.isComplete=true;
+            steps++;render();updateHUD();checkVictory();return;
+          } else {
+            asideRoomIdx++;
+            steps++;checkAsideCell();render();updateHUD();return;
+          }
+        }
+      }
+    }
+    // Retreat from aside via entry cell (first room, cell 0,0) — mirrors alcove retreat
+    if(asideRoomIdx===0&&ar.player.r===0&&ar.player.c===0){
+      const bd={bottom:[-1,0],top:[1,0],left:[0,1],right:[0,-1]}[ac.openWall];
+      if(bd&&dr===bd[0]&&dc===bd[1]){
+        inAside=false;
+        steps++;render();updateHUD();return;
+      }
+    }
+    return;
+  }
+
+  // ── In alcove ──
+  if(room.alcove?.playerInAlcove){
+    const alcove=room.alcove;
+    const pr=alcove.playerRow+dr,pc=alcove.playerCol+dc;
+    if(pr>=0&&pr<AROWS&&pc>=0&&pc<ACOLS&&canMoveAlcove(alcove.maze,alcove.playerRow,alcove.playerCol,dr,dc)){
+      alcove.playerRow=pr;alcove.playerCol=pc;
+      steps++;checkAlcoveCell();render();updateHUD();return;
+    }
+    // Exit alcove by pressing the direction toward main room — must be at the opening
+    const{openWall,openPos}=alcove;
+    let exitToMain=false;
+    if(openWall==='bottom'&&dr===-1&&alcove.playerRow===0&&alcove.playerCol===openPos)exitToMain=true;
+    else if(openWall==='right'&&dc===-1&&alcove.playerCol===0&&alcove.playerRow===openPos)exitToMain=true;
+    else if(openWall==='left'&&dc===1&&alcove.playerCol===ACOLS-1&&alcove.playerRow===openPos)exitToMain=true;
+    else if(openWall==='top'&&dr===1&&alcove.playerRow===AROWS-1&&alcove.playerCol===openPos)exitToMain=true;
+    if(exitToMain){alcove.playerInAlcove=false;steps++;render();updateHUD();}
+    return;
+  }
+
+  // ── Retreat through entrance — arrow pointing back ──
+  if(hasLeftEntrance&&isOnEntranceCell()&&currentRoom>0){
+    const{entranceWall}=room;
+    const retreatDir={top:[-1,0],bottom:[1,0],left:[0,-1],right:[0,1]};
+    const rd=retreatDir[entranceWall];
+    if(rd&&dr===rd[0]&&dc===rd[1]){
+      currentRoom--;onDoor=false;onEntrance=false;hasLeftEntrance=true;
+      render();updateHUD();return;
+    }
+  }
+
+  // ── Pass through exit door — arrow in door's direction ──
+  if(isOnExitDoor()){
+    const{exitDoor}=room;
+    const doorDir={top:[-1,0],bottom:[1,0],left:[0,-1],right:[0,1]};
+    const dd=doorDir[exitDoor.wall];
+    if(dd&&dr===dd[0]&&dc===dd[1]){
+      if(!roomUnlocked(room))return; // locked — do nothing
+      if(room.seg.lockType==='key_here'||room.seg.lockType==='key_prior'){
+        const ki=inventory.findIndex(k=>k.colorIdx===room.keyColorIdx);
+        if(ki>=0)inventory.splice(ki,1);
+        room.doorPassed=true;
+      }
+      if(room.seg.boundaryChar!=null&&room.seg.boundaryGlobalIdx!=null)globalFound.add(room.seg.boundaryGlobalIdx);
+      currentRoom++;onDoor=false;onEntrance=false;hasLeftEntrance=false;
+      if(currentRoom>=rooms.length){render();updateHUD();setTimeout(showVictory,300);return;}
+      checkKeyActivations();checkCell();render();updateHUD();return;
+    }
+  }
+
+  // ── Enter alcove ──
+  if(room.alcove&&isAlcoveEntry(room,dr,dc)){
+    const{openWall}=room.alcove;
+    room.alcove.playerInAlcove=true;
+    if(openWall==='bottom'){room.alcove.playerRow=0;room.alcove.playerCol=Math.min(room.alcove.openPos,ACOLS-1);}
+    else if(openWall==='right'){room.alcove.playerRow=Math.min(room.alcove.openPos,AROWS-1);room.alcove.playerCol=0;}
+    else if(openWall==='left'){room.alcove.playerRow=Math.min(room.alcove.openPos,AROWS-1);room.alcove.playerCol=ACOLS-1;}
+    else if(openWall==='top'){room.alcove.playerRow=AROWS-1;room.alcove.playerCol=Math.min(room.alcove.openPos,ACOLS-1);}
+    steps++;checkAlcoveCell();render();updateHUD();return;
+  }
+
+  // ── Enter aside chain ──
+  const entryCI=isAsideChainEntry(room,dr,dc);
+  if(entryCI>=0){
+    const ac=room.asideChains[entryCI];
+    if(!ac.rooms.length)return;
+    inAside=true;asideChainIdx=entryCI;asideRoomIdx=0;
+    globalFound.add(ac.openGIdx);
+    const ar=ac.rooms[0];
+    ar.player={r:0,c:0,visited:new Set([`0_0`])};
+    steps++;checkAsideCell();render();updateHUD();return;
+  }
+
+  // ── Normal movement ──
+  if(!canMoveMaze(room.maze,room.player.r,room.player.c,dr,dc))return;
+  room.player.r+=dr;room.player.c+=dc;
+  room.player.visited.add(`${room.player.r}_${room.player.c}`);
+  steps++;
+  if(!hasLeftEntrance&&!isOnEntranceCell())hasLeftEntrance=true;
+  onDoor=isOnExitDoor();
+  onEntrance=hasLeftEntrance&&isOnEntranceCell();
+  checkCell();render();updateHUD();
+}
+
+function isAlcoveEntry(room,dr,dc){
+  const{openWall,openPos}=room.alcove;
+  const{r,c}=room.player;
+  if(openWall==='bottom'&&dr===1&&r===ROWS-1&&c===Math.min(openPos,COLS-1))return true;
+  if(openWall==='right'&&dc===1&&c===COLS-1&&r===Math.min(openPos,ROWS-1))return true;
+  if(openWall==='left'&&dc===-1&&c===0&&r===Math.min(openPos,ROWS-1))return true;
+  if(openWall==='top'&&dr===-1&&r===0&&c===Math.min(openPos,COLS-1))return true;
+  return false;
+}
+
+function isAsideChainEntry(room,dr,dc){
+  for(let ci=0;ci<room.asideChains.length;ci++){
+    const{openWall,openPos}=room.asideChains[ci];
+    const{r,c}=room.player;
+    if(openWall===`bottom`&&dr===1&&r===ROWS-1&&c===Math.min(openPos,COLS-1))return ci;
+    if(openWall===`right`&&dc===1&&c===COLS-1&&r===Math.min(openPos,ROWS-1))return ci;
+    if(openWall===`left`&&dc===-1&&c===0&&r===Math.min(openPos,ROWS-1))return ci;
+    if(openWall===`top`&&dr===-1&&r===0&&c===Math.min(openPos,COLS-1))return ci;
+  }
+  return -1;
+}
+
+function handleEnter(){
+  if(!rooms.length)return;
+  // Enter is now only for picking up keys
+  tryPickupKey();render();updateHUD();
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'){e.preventDefault();tryPickupKey();render();updateHUD();return;}
+  if(!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key))return;
+  e.preventDefault();
+  const map={ArrowUp:[-1,0],ArrowDown:[1,0],ArrowLeft:[0,-1],ArrowRight:[0,1]};
+  handleArrow(...map[e.key]);
+});
+
+// Check if player is currently standing on a collectible key
+function isOnActiveKey(){
+  if(!rooms.length)return false;
+  const room=rooms[currentRoom];
+  // Floor keys
+  if(room.floorKeys.some(fk=>fk.discovered&&fk.active&&!fk.collected&&
+     fk.row===room.player.r&&fk.col===room.player.c))return true;
+  // Alcove key
+  if(room.alcove?.playerInAlcove){
+    const k=room.alcove.key;
+    if(k&&k.discovered&&k.active&&!k.collected&&
+       k.row===room.alcove.playerRow&&k.col===room.alcove.playerCol)return true;
+  }
+  return false;
+}
+
+const cv_el=document.getElementById('maze');
+let _touchStart={x:0,y:0};
+cv_el.addEventListener('touchstart',e=>{
+  if(!isMobile)return;
+  e.preventDefault();
+  const t=e.changedTouches[0];
+  _touchStart={x:t.clientX,y:t.clientY};
+},{passive:false});
+
+cv_el.addEventListener('touchend',e=>{
+  if(!isMobile)return;
+  e.preventDefault();
+  const t=e.changedTouches[0],rect=cv_el.getBoundingClientRect();
+  const ex=t.clientX,ey=t.clientY;
+  const dx=ex-_touchStart.x,dy=ey-_touchStart.y;
+  const dist=Math.sqrt(dx*dx+dy*dy);
+
+  // Short tap — check key pickup first, then quadrant fallback
+  if(dist<12){
+    const lx=ex-rect.left,ly=ey-rect.top;
+    if(isOnActiveKey()){
+      const btnR=Math.max(28,CELL*0.7);
+      const cx=cv_el.width/2,cy=cv_el.height/2;
+      if(Math.sqrt((lx-cx)**2+(ly-cy)**2)<btnR){
+        tryPickupKey();render();updateHUD();return;
+      }
+    }
+    const tx=lx-cv_el.width/2,ty=ly-cv_el.height/2;
+    if(Math.abs(tx)<cv_el.width*0.13&&Math.abs(ty)<cv_el.height*0.13)return;
+    const dir=Math.abs(tx)>Math.abs(ty)?[0,tx>0?1:-1]:[ty>0?1:-1,0];
+    handleArrow(dir[0],dir[1]);
+    return;
+  }
+
+  // Swipe — direction from delta
+  const dir=Math.abs(dx)>Math.abs(dy)?[0,dx>0?1:-1]:[dy>0?1:-1,0];
+  handleArrow(dir[0],dir[1]);
+},{passive:false});
+
+function euclidean(r1,c1,r2,c2){return Math.sqrt((r1-r2)**2+(c1-c2)**2);}
+function isVis(room,row,col){
+  if(fogRadius===0)return true;
+  const r=fogRadius===-1?2.2:fogRadius;
+  if(fogRadius!==-1&&room.player.visited.has(`${row}_${col}`))return true;
+  return euclidean(room.player.r,room.player.c,row,col)<=r;
+}
+function fogA(room,row,col){
+  if(fogRadius===0)return 0;
+  const r=fogRadius===-1?2.2:fogRadius;
+  if(fogRadius!==-1&&room.player.visited.has(`${row}_${col}`))return 0;
+  const d=euclidean(room.player.r,room.player.c,row,col);
+  if(d<=r-.5)return 0;if(d>=r+.5)return 1;return d-(r-.5);
+}
+
+// ── Key geometry ─────────────────────────────────────────────────────────────
+function drawKey(ctx,cx,cy,C,colorHex,dim){
+  const s=Math.max(4,C*0.18);
+  const col=dim?'rgba(100,95,80,0.55)':colorHex;
+  ctx.strokeStyle=col;ctx.lineWidth=Math.max(1.5,C*0.06);
+  ctx.beginPath();ctx.arc(cx,cy-s*0.8,s*0.55,0,Math.PI*2);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx,cy-s*0.25);ctx.lineTo(cx,cy+s*1.1);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx,cy+s*0.5);ctx.lineTo(cx+s*0.4,cy+s*0.5);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx,cy+s*0.9);ctx.lineTo(cx+s*0.4,cy+s*0.9);ctx.stroke();
+}
+
+function drawKeyhole(ctx,cx,cy,C,colorHex,dim){
+  const s=Math.max(3,C*0.15);
+  const col=dim?'rgba(80,75,60,0.5)':colorHex;
+  ctx.strokeStyle=col;ctx.lineWidth=Math.max(1.5,C*0.055);
+  ctx.beginPath();ctx.arc(cx,cy-s*0.3,s*0.45,0,Math.PI*2);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx-s*0.35,cy-s*0.1);ctx.lineTo(cx+s*0.35,cy-s*0.1);ctx.lineTo(cx,cy+s*0.7);ctx.closePath();ctx.stroke();
+}
+
+
+// All geometry helpers — zero unicode dependency
+function drawDiamond(ctx,x,y,r,color){
+  ctx.fillStyle=color;ctx.beginPath();
+  ctx.moveTo(x,y-r);ctx.lineTo(x+r,y);ctx.lineTo(x,y+r);ctx.lineTo(x-r,y);
+  ctx.closePath();ctx.fill();
+}
+function drawBrackets(ctx,x,y,C,color){
+  const sz=Math.max(5,C*0.22),m=Math.max(3,C*0.09);
+  ctx.strokeStyle=color;ctx.lineWidth=2;
+  ctx.beginPath();
+  ctx.moveTo(x+m+sz,y+m);ctx.lineTo(x+m,y+m);ctx.lineTo(x+m,y+m+sz);
+  ctx.moveTo(x+C-m-sz,y+m);ctx.lineTo(x+C-m,y+m);ctx.lineTo(x+C-m,y+m+sz);
+  ctx.moveTo(x+m+sz,y+C-m);ctx.lineTo(x+m,y+C-m);ctx.lineTo(x+m,y+C-m-sz);
+  ctx.moveTo(x+C-m-sz,y+C-m);ctx.lineTo(x+C-m,y+C-m);ctx.lineTo(x+C-m,y+C-m-sz);
+  ctx.stroke();
+}
+function drawEntranceArrow(ctx,cx,cy,wall,C,color){
+  const s=Math.max(5,C*0.17);
+  ctx.fillStyle=color;ctx.beginPath();
+  if(wall==='top'){ctx.moveTo(cx,cy-s);ctx.lineTo(cx-s,cy+s*0.6);ctx.lineTo(cx+s,cy+s*0.6);}
+  else if(wall==='bottom'){ctx.moveTo(cx,cy+s);ctx.lineTo(cx-s,cy-s*0.6);ctx.lineTo(cx+s,cy-s*0.6);}
+  else if(wall==='left'){ctx.moveTo(cx-s,cy);ctx.lineTo(cx+s*0.6,cy-s);ctx.lineTo(cx+s*0.6,cy+s);}
+  else{ctx.moveTo(cx+s,cy);ctx.lineTo(cx-s*0.6,cy-s);ctx.lineTo(cx-s*0.6,cy+s);}
+  ctx.closePath();ctx.fill();
+}
+
+function drawRaven(ctx,px,py,C){
+  // Forest green aura
+  const aura=ctx.createRadialGradient(px,py,C*0.1,px,py,C*0.6);
+  aura.addColorStop(0,'rgba(60,110,60,0.28)');aura.addColorStop(1,'rgba(60,110,60,0)');
+  ctx.fillStyle=aura;ctx.beginPath();ctx.arc(px,py,C*0.6,0,Math.PI*2);ctx.fill();
+
+  if(ravenImg){
+    const svgW=C;
+    const svgH=C*(573.07/750);
+    const w=Math.ceil(svgW),h=Math.ceil(svgH);
+
+    if(!ravenCache||ravenCache.C!==C){
+      // Build main (tinted) canvas
+      const main=document.createElement('canvas');
+      main.width=w;main.height=h;
+      const mc=main.getContext('2d');
+      mc.drawImage(ravenImg,0,0,w,h);
+      mc.globalCompositeOperation='source-in';
+      const tint=mc.createLinearGradient(0,0,w,h);
+      tint.addColorStop(0,'#2a3a5a');
+      tint.addColorStop(0.5,'#141820');
+      tint.addColorStop(1,'#0a0c14');
+      mc.fillStyle=tint;
+      mc.fillRect(0,0,w,h);
+
+      // Build outline canvas (slightly larger, green tinted)
+      const out=document.createElement('canvas');
+      out.width=w+2;out.height=h+2;
+      const oc=out.getContext('2d');
+      oc.drawImage(ravenImg,0,0,w+2,h+2);
+      oc.globalCompositeOperation='source-atop';
+      oc.fillStyle='rgba(80,140,80,0.55)';
+      oc.fillRect(0,0,w+2,h+2);
+
+      ravenCache={C,main,outline:out};
+    }
+
+    const drawX=px-svgW*0.5;
+    const drawY=py-svgH*0.5;
+
+    // Outline pass
+    ctx.save();
+    ctx.globalAlpha=0.45;
+    ctx.drawImage(ravenCache.outline,drawX-1,drawY-1,svgW+2,svgH+2);
+    ctx.restore();
+
+    // Main bird
+    ctx.drawImage(ravenCache.main,drawX,drawY,svgW,svgH);
+  } else {
+    ctx.fillStyle='#141820';
+    ctx.beginPath();ctx.arc(px,py,Math.max(5,C*0.25),0,Math.PI*2);ctx.fill();
+  }
+}
+
+
+function drawTapZones(ctx,W,H,room,player){
+  const s=Math.max(11,CELL*0.3),pad=Math.max(12,CELL*0.38),alpha=0.35;
+  function tri(tx,ty,dr,dc){
+    const can=canMoveMaze(room.maze,player.r,player.c,dr,dc);
+    ctx.fillStyle=can?`rgba(210,230,190,${alpha})`:`rgba(55,70,45,${alpha*0.3})`;
+    ctx.beginPath();
+    if(dr===-1){ctx.moveTo(tx,ty-s*1.1);ctx.lineTo(tx-s,ty+s*0.1);ctx.lineTo(tx+s,ty+s*0.1);}
+    else if(dr===1){ctx.moveTo(tx,ty+s*1.1);ctx.lineTo(tx-s,ty-s*0.1);ctx.lineTo(tx+s,ty-s*0.1);}
+    else if(dc===-1){ctx.moveTo(tx-s*1.1,ty);ctx.lineTo(tx+s*0.1,ty-s);ctx.lineTo(tx+s*0.1,ty+s);}
+    else{ctx.moveTo(tx+s*1.1,ty);ctx.lineTo(tx-s*0.1,ty-s);ctx.lineTo(tx-s*0.1,ty+s);}
+    ctx.closePath();ctx.fill();
+  }
+  tri(W/2,pad,-1,0);tri(W/2,H-pad,1,0);tri(pad,H/2,0,-1);tri(W-pad,H/2,0,1);
+
+  // Key pickup button — shown when standing on an active key
+  if(isOnActiveKey()){
+    const room2=rooms[currentRoom];
+    let colorIdx=0;
+    const fk=room2.floorKeys.find(k=>k.discovered&&k.active&&!k.collected&&
+       k.row===room2.player.r&&k.col===room2.player.c);
+    if(fk)colorIdx=fk.colorIdx;
+    else if(room2.alcove?.playerInAlcove){
+      const k=room2.alcove.key;
+      if(k&&k.discovered&&k.active&&!k.collected)colorIdx=k.colorIdx;
+    }
+    const btnR=Math.max(28,CELL*0.7);
+    const cx=W/2,cy=H/2;
+    const name=KEY_COLORS_NAMES[colorIdx%KEY_COLORS_NAMES.length];
+    const col=KEY_COLORS[colorIdx%KEY_COLORS.length];
+    // Button circle
+    ctx.fillStyle='rgba(10,15,10,0.88)';
+    ctx.beginPath();ctx.arc(cx,cy,btnR,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle=col;ctx.lineWidth=2;
+    ctx.beginPath();ctx.arc(cx,cy,btnR,0,Math.PI*2);ctx.stroke();
+    // Key icon
+    drawKey(ctx,cx,cy-btnR*0.18,btnR*1.2,col,false);
+    // Label
+    ctx.font=`bold ${Math.max(10,btnR*0.32)}px 'Share Tech Mono',monospace`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillStyle=col;
+    ctx.fillText(`take ${name} key`,cx,cy+btnR*0.65);
+  } else if(!inAside&&(onDoor||onEntrance)){
+    const label=onEntrance?'tap back to retreat':'tap door direction to enter';
+    ctx.font=`bold ${Math.max(11,CELL*0.26)}px 'Share Tech Mono',monospace`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    const tw=ctx.measureText(label).width+18,th=24;
+    const tx=W/2,ty=H*0.72;
+    ctx.fillStyle='rgba(10,15,10,0.9)';
+    ctx.beginPath();ctx.roundRect(tx-tw/2,ty-th/2,tw,th,4);ctx.fill();
+    ctx.fillStyle=onEntrance?'rgba(90,176,255,0.95)':'rgba(224,168,64,0.95)';
+    ctx.fillText(label,tx,ty);
+  } else if(inAside){
+    const ac=rooms[currentRoom].asideChains[asideChainIdx];
+    const ar=ac.rooms[asideRoomIdx];
+    const atEntry=asideRoomIdx===0&&ar.player.r===0&&ar.player.c===0;
+    if(atEntry){
+      const label='tap direction to retreat';
+      ctx.font=`bold ${Math.max(11,CELL*0.26)}px 'Share Tech Mono',monospace`;
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      const tw=ctx.measureText(label).width+18,th=24;
+      const tx=W/2,ty=H*0.72;
+      ctx.fillStyle='rgba(10,15,10,0.9)';
+      ctx.beginPath();ctx.roundRect(tx-tw/2,ty-th/2,tw,th,4);ctx.fill();
+      ctx.fillStyle='rgba(90,176,255,0.95)';
+      ctx.fillText(label,tx,ty);
+    } else if(ar.exitDoor){
+      const ec=cellOf(ar.exitDoor.wall,ar.exitDoor.pos);
+      if(ar.player.r===ec.r&&ar.player.c===ec.c){
+        const label=ar.isAsideLast?`tap direction to return`:`tap door to continue`;
+        ctx.font=`bold ${Math.max(11,CELL*0.26)}px 'Share Tech Mono',monospace`;
+        ctx.textAlign='center';ctx.textBaseline='middle';
+        const tw=ctx.measureText(label).width+18,th=24;
+        const tx=W/2,ty=H*0.72;
+        ctx.fillStyle='rgba(10,15,10,0.9)';
+        ctx.beginPath();ctx.roundRect(tx-tw/2,ty-th/2,tw,th,4);ctx.fill();
+        ctx.fillStyle='rgba(196,144,64,0.95)';
+        ctx.fillText(label,tx,ty);
+      }
+    }
+  }
+}
+
+function render(){
+  if(!rooms.length)return;
+  const mainRoom=rooms[currentRoom];
+  const activeAC=inAside?mainRoom.asideChains[asideChainIdx]:null;
+  const room=inAside?activeAC.rooms[asideRoomIdx]:mainRoom;
+  const{maze,player,letterCells,exitDoor,entranceCell,entranceWall,seg,alcove}=room;
+  const unlocked=inAside
+    ?room.seg.chars.every(c=>globalFound.has(c.globalIdx))
+    :roomUnlocked(room);
+  const exitCell=exitDoor?cellOf(exitDoor.wall,exitDoor.pos):null;
+  const C=CELL;
+  const cv=document.getElementById('maze');
+  const ctx=cv.getContext('2d');
+
+  // Always fixed canvas size — alcove uses view-switch, not canvas expansion
+  if(cv.height!==ROWS*C)cv.height=ROWS*C;
+  ctx.clearRect(0,0,cv.width,cv.height);
+  ctx.fillStyle='#0a0f0a';ctx.fillRect(0,0,cv.width,cv.height);
+
+  // ── ALCOVE VIEW — shown when player is inside the grove ──
+  if(alcove?.playerInAlcove){
+    const apr=alcove.playerRow,apc=alcove.playerCol;
+    const avisited=alcove.visited||new Set();
+    const AC=Math.min(Math.floor(cv.width/ACOLS),Math.floor(cv.height/AROWS));
+    const ox=Math.floor((cv.width-ACOLS*AC)/2);
+    const oy=Math.floor((cv.height-AROWS*AC)/2);
+    const mockPlayer={r:apr,c:apc,visited:avisited};
+
+    // Header
+    ctx.fillStyle='rgba(196,144,64,0.12)';ctx.fillRect(0,0,cv.width,oy);
+    ctx.font=`bold ${Math.max(11,C*0.28)}px 'Share Tech Mono',monospace`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillStyle='rgba(196,144,64,0.85)';
+    ctx.fillText('the grove',cv.width/2,Math.max(oy*0.45,10));
+
+    // Alcove background
+    ctx.fillStyle='#0c160e';ctx.fillRect(ox,oy,ACOLS*AC,AROWS*AC);
+
+    // Determine exit cell — the cell on the edge facing the main room
+    const{openWall,openPos}=alcove;
+    let exitR=-1,exitC=-1;
+    if(openWall==='bottom'){exitR=0;exitC=Math.min(openPos,ACOLS-1);}
+    else if(openWall==='right'){exitR=Math.min(openPos,AROWS-1);exitC=0;}
+    else if(openWall==='left'){exitR=Math.min(openPos,AROWS-1);exitC=ACOLS-1;}
+    else if(openWall==='top'){exitR=AROWS-1;exitC=Math.min(openPos,ACOLS-1);}
+
+    for(let row=0;row<AROWS;row++){
+      for(let col=0;col<ACOLS;col++){
+        const ax=ox+col*AC,ay=oy+row*AC;
+        const akey=`${row}_${col}`;
+        const isAPlayer=row===apr&&col===apc;
+        const ahasLetter=!!alcove.letterCells[akey];
+        const aletterFound=ahasLetter&&alcove.letterCells[akey].found;
+        const k=alcove.key;
+        const isKeyCell=k&&!k.collected&&k.row===row&&k.col===col;
+        const isExit=row===exitR&&col===exitC;
+        const avis=isVis({player:mockPlayer},row,col);
+
+        // Cell bg
+        if(isExit)ctx.fillStyle='rgba(90,160,255,0.12)';
+        else if(isAPlayer)ctx.fillStyle='rgba(70,120,70,0.32)';
+        else if(ahasLetter&&aletterFound)ctx.fillStyle='rgba(110,220,130,0.14)';
+        else if(isKeyCell&&k.discovered)ctx.fillStyle=`rgba(${keyColorRGB(k.colorIdx)},0.1)`;
+        else if(ahasLetter||isKeyCell)ctx.fillStyle='rgba(220,160,60,0.1)';
+        else ctx.fillStyle='#0c160e';
+        ctx.fillRect(ax,ay,AC,AC);
+
+        // Exit indicator — matches main room entrance style
+        if(isExit){
+          ctx.strokeStyle='rgba(90,160,255,0.55)';ctx.lineWidth=1.5;
+          ctx.setLineDash([3,3]);ctx.strokeRect(ax+2,ay+2,AC-4,AC-4);ctx.setLineDash([]);
+          // Arrow pointing outward toward main room
+          const exitWallDir=openWall==='bottom'?'top':openWall==='right'?'left':'right';
+          drawEntranceArrow(ctx,ax+AC/2,ay+AC/2,exitWallDir,AC,'rgba(90,160,255,0.7)');
+          if(isAPlayer&&!isMobile){
+            ctx.font=`${Math.max(8,AC*0.22)}px 'Share Tech Mono',monospace`;
+            ctx.textAlign='center';ctx.textBaseline='bottom';
+            ctx.fillStyle='rgba(90,160,255,0.85)';
+            ctx.fillText('retreat',ax+AC/2,ay+AC-2);
+          }
+        }
+
+        // Moss trail
+        if(avisited.has(akey)&&!isAPlayer&&!isExit){
+          ctx.fillStyle='rgba(70,130,70,0.65)';
+          ctx.beginPath();ctx.arc(ax+AC/2-1,ay+AC/2,Math.max(1.5,AC*0.07),0,Math.PI*2);ctx.fill();
+        }
+
+        // Letter
+        if(ahasLetter&&!isExit&&avis){
+          if(aletterFound){
+            ctx.font=`bold ${Math.max(12,AC*0.54)}px 'Share Tech Mono',monospace`;
+            ctx.textAlign='center';ctx.textBaseline='middle';
+            ctx.fillStyle='#a0f0a0';
+            ctx.fillText(alcove.letterCells[akey].char,ax+AC/2,ay+AC/2);
+          } else {
+            drawDiamond(ctx,ax+AC/2,ay+AC/2,Math.max(3,AC*0.14),'rgba(224,160,56,0.65)');
+          }
+        }
+
+        // Key — hidden as diamond until discovered, then dim/bright key shape
+        if(isKeyCell&&!isExit&&avis){
+          if(!k.discovered){
+            // Undiscovered — looks identical to undiscovered letter
+            drawDiamond(ctx,ax+AC/2,ay+AC/2,Math.max(3,AC*0.14),'rgba(224,160,56,0.65)');
+          } else {
+            // Discovered — show as key shape, dim or bright
+            const pulse=room.pulseFrames['key_'+k.row+'_'+k.col]>0;
+            const dim=!k.active&&!pulse;
+            drawKey(ctx,ax+AC/2,ay+AC/2,AC,pulse?'#ffffff':KEY_COLORS[k.colorIdx],dim);
+            if(isAPlayer&&k.active&&!isMobile){
+              ctx.font=`${Math.max(8,AC*0.22)}px 'Share Tech Mono',monospace`;
+              ctx.textAlign='center';ctx.textBaseline='bottom';
+              ctx.fillStyle=KEY_COLORS[k.colorIdx];
+              ctx.fillText('enter: take',ax+AC/2,ay+AC-2);
+            }
+          }
+        }
+
+        const afa=fogA({player:mockPlayer},row,col);
+        if(afa>0){ctx.fillStyle=`rgba(10,15,10,${afa})`;ctx.fillRect(ax,ay,AC,AC);}
+      }
+    }
+
+    // Walls
+    for(let row=0;row<AROWS;row++){
+      for(let col=0;col<ACOLS;col++){
+        const ax=ox+col*AC,ay=oy+row*AC;
+        const vH=isVis({player:mockPlayer},row,col),vR=col+1<ACOLS&&isVis({player:mockPlayer},row,col+1),vD=row+1<AROWS&&isVis({player:mockPlayer},row+1,col);
+        const pH=avisited.has(`${row}_${col}`),pR=avisited.has(`${row}_${col+1}`),pD=avisited.has(`${row+1}_${col}`);
+        if(alcove.maze[row][col].R&&(vH||vR)){
+          ctx.strokeStyle=pH||pR?'#8a6a38':'#c49040';ctx.lineWidth=2;
+          ctx.beginPath();ctx.moveTo(ax+AC,ay);ctx.lineTo(ax+AC,ay+AC);ctx.stroke();
+        }
+        if(alcove.maze[row][col].D&&(vH||vD)){
+          ctx.strokeStyle=pH||pD?'#8a6a38':'#c49040';ctx.lineWidth=2;
+          ctx.beginPath();ctx.moveTo(ax,ay+AC);ctx.lineTo(ax+AC,ay+AC);ctx.stroke();
+        }
+      }
+    }
+    ctx.strokeStyle='#c49040';ctx.lineWidth=2.5;
+    ctx.strokeRect(ox,oy,ACOLS*AC,AROWS*AC);
+
+    drawRaven(ctx,ox+apc*AC+AC/2,oy+apr*AC+AC/2,AC);
+
+    Object.keys(room.pulseFrames).forEach(k=>{if(room.pulseFrames[k]>0)room.pulseFrames[k]--;});
+    if(isMobile)drawTapZones(ctx,cv.width,cv.height,{maze:alcove.maze,player:{r:apr,c:apc}},{r:apr,c:apc});
+    return;
+  }
+
+  // ── MAIN ROOM VIEW ──
+  for(let row=0;row<ROWS;row++){
+    for(let col=0;col<COLS;col++){
+      const x=col*C,y=row*C,key=`${row}_${col}`;
+      const visited=player.visited.has(key),isPlayer=player.r===row&&player.c===col&&!alcove?.playerInAlcove;
+      const hasLetter=!!letterCells[key],letterFound=hasLetter&&letterCells[key].found;
+      const isExit=exitCell&&exitCell.r===row&&exitCell.c===col;
+      const isEntr=!inAside&&currentRoom>0&&hasLeftEntrance&&entranceCell&&entranceCell.r===row&&entranceCell.c===col;
+      const isAsideEntr=inAside&&asideRoomIdx===0&&row===0&&col===0;
+      const vis=isVis(room,row,col);
+
+      const fkCell=room.floorKeys.find(k=>!k.collected&&k.row===row&&k.col===col)||null;
+      if(isExit)ctx.fillStyle=unlocked?'rgba(100,210,120,0.25)':'rgba(220,80,80,0.2)';
+      else if(isEntr||isAsideEntr)ctx.fillStyle='rgba(90,160,255,0.14)';
+      else if(isPlayer)ctx.fillStyle='rgba(70,120,70,0.32)';
+      else if(fkCell&&fkCell.discovered)ctx.fillStyle=`rgba(${keyColorRGB(fkCell.colorIdx)},0.1)`;
+      else if(visited)ctx.fillStyle='#151e15';
+      else if(!vis)ctx.fillStyle='#0a0f0a';
+      else if(letterFound)ctx.fillStyle='rgba(110,220,130,0.14)';
+      else if(hasLetter||fkCell)ctx.fillStyle='rgba(220,160,60,0.12)';
+      else ctx.fillStyle='#0f150f';
+      ctx.fillRect(x,y,C,C);
+
+      // Exit door
+      if(isExit&&vis){
+        const isKeyLock=!inAside&&(seg.lockType===`key_here`||seg.lockType===`key_prior`);
+        const isReturnDoor=inAside&&room.isAsideLast;
+        const pulse=room.pulseFrames['door']>0;
+        if(isKeyLock){
+          const doorCol=unlocked?KEY_COLORS[room.keyColorIdx]:`rgba(80,75,60,0.6)`;
+          const brightCol=pulse?'#ffffff':doorCol;
+          drawBrackets(ctx,x,y,C,brightCol);
+          drawKeyhole(ctx,x+C/2,y+C/2,C,brightCol,!unlocked&&!pulse);
+        } else if(isReturnDoor){
+          const doorCol=unlocked?`rgba(196,144,64,0.9)`:`rgba(60,45,15,0.6)`;
+          const brightCol=pulse?'#ffffff':doorCol;
+          drawBrackets(ctx,x,y,C,brightCol);
+          const bc=activeAC?activeAC.closeChar:`>`;
+          ctx.font=`bold ${Math.max(13,C*0.4)}px 'Share Tech Mono',monospace`;
+          ctx.textAlign='center';ctx.textBaseline='middle';
+          ctx.fillStyle=unlocked?'#ffd080':`rgba(100,80,30,0.7)`;
+          ctx.fillText(bc,x+C/2,y+C/2);
+        } else {
+          drawBrackets(ctx,x,y,C,unlocked?'rgba(100,220,120,0.9)':'rgba(220,80,80,0.9)');
+          const bc=seg.boundaryChar||'>';
+          ctx.font=`bold ${Math.max(13,C*0.4)}px 'Share Tech Mono',monospace`;
+          ctx.textAlign='center';ctx.textBaseline='middle';
+          ctx.fillStyle=unlocked?'#90ee90':'#ee8080';
+          ctx.fillText(bc,x+C/2,y+C/2);
+        }
+        if(isPlayer&&!isMobile){
+          ctx.font=`${Math.max(9,C*0.22)}px 'Share Tech Mono',monospace`;
+          ctx.textAlign='center';ctx.textBaseline='bottom';
+          ctx.fillStyle=isReturnDoor?(unlocked?`rgba(196,144,64,0.85)`:`rgba(100,80,30,0.65)`):(unlocked?'rgba(100,220,120,0.85)':'rgba(220,80,80,0.65)');
+          ctx.fillText(isReturnDoor?'return':'enter',x+C/2,y+C-4);
+        }
+      }
+
+      // Entrance
+      if(isEntr&&vis){
+        ctx.strokeStyle='rgba(90,160,255,0.55)';ctx.lineWidth=2;
+        ctx.setLineDash([3,3]);ctx.strokeRect(x+3,y+3,C-6,C-6);ctx.setLineDash([]);
+        drawEntranceArrow(ctx,x+C/2,y+C/2,entranceWall,C,'rgba(90,160,255,0.7)');
+        if(isPlayer&&!isMobile){
+          ctx.font=`${Math.max(9,C*0.22)}px 'Share Tech Mono',monospace`;
+          ctx.textAlign='center';ctx.textBaseline='bottom';
+          ctx.fillStyle='rgba(90,160,255,0.85)';
+          ctx.fillText('retreat',x+C/2,y+C-3);
+        }
+      }
+
+      // Aside entry (retreat back to parent room)
+      if(isAsideEntr&&vis){
+        const backWall=opposite(activeAC.openWall);
+        ctx.strokeStyle='rgba(90,160,255,0.55)';ctx.lineWidth=2;
+        ctx.setLineDash([3,3]);ctx.strokeRect(x+3,y+3,C-6,C-6);ctx.setLineDash([]);
+        drawEntranceArrow(ctx,x+C/2,y+C/2,backWall,C,'rgba(90,160,255,0.7)');
+        if(isPlayer&&!isMobile){
+          ctx.font=`${Math.max(9,C*0.22)}px 'Share Tech Mono',monospace`;
+          ctx.textAlign='center';ctx.textBaseline='bottom';
+          ctx.fillStyle='rgba(90,160,255,0.85)';
+          ctx.fillText('retreat',x+C/2,y+C-3);
+        }
+      }
+
+      // Alcove opening highlight
+      if(alcove&&vis){
+        const{openWall,openPos}=alcove;
+        let isOpening=false;
+        if(openWall==='bottom'&&row===ROWS-1&&col===Math.min(openPos,COLS-1))isOpening=true;
+        else if(openWall==='right'&&col===COLS-1&&row===Math.min(openPos,ROWS-1))isOpening=true;
+        else if(openWall==='left'&&col===0&&row===Math.min(openPos,ROWS-1))isOpening=true;
+        else if(openWall==='top'&&row===0&&col===Math.min(openPos,COLS-1))isOpening=true;
+        if(isOpening){
+          ctx.fillStyle='rgba(180,130,50,0.12)';ctx.fillRect(x,y,C,C);
+          ctx.strokeStyle='rgba(196,144,64,0.55)';ctx.lineWidth=1.5;
+          ctx.setLineDash([2,3]);ctx.strokeRect(x+2,y+2,C-4,C-4);ctx.setLineDash([]);
+          drawEntranceArrow(ctx,x+C/2,y+C/2,openWall,C,'rgba(196,144,64,0.55)');
+          // Bright wall edge — the gap in the wall glows amber, very readable on mobile
+          ctx.strokeStyle='rgba(220,168,60,0.85)';ctx.lineWidth=3;
+          if(openWall==='bottom'){ctx.beginPath();ctx.moveTo(x+2,y+C);ctx.lineTo(x+C-2,y+C);ctx.stroke();}
+          else if(openWall==='right'){ctx.beginPath();ctx.moveTo(x+C,y+2);ctx.lineTo(x+C,y+C-2);ctx.stroke();}
+          else if(openWall==='top'){ctx.beginPath();ctx.moveTo(x+2,y);ctx.lineTo(x+C-2,y);ctx.stroke();}
+          else{ctx.beginPath();ctx.moveTo(x,y+2);ctx.lineTo(x,y+C-2);ctx.stroke();}
+        }
+      }
+
+      // Aside chain opening highlights
+      if(!inAside&&mainRoom.asideChains){
+        for(const ac of mainRoom.asideChains){
+          const{openWall:aw,openPos:ap}=ac;
+          let isAside=false;
+          if(aw===`bottom`&&row===ROWS-1&&col===Math.min(ap,COLS-1))isAside=true;
+          else if(aw===`right`&&col===COLS-1&&row===Math.min(ap,ROWS-1))isAside=true;
+          else if(aw===`left`&&col===0&&row===Math.min(ap,ROWS-1))isAside=true;
+          else if(aw===`top`&&row===0&&col===Math.min(ap,COLS-1))isAside=true;
+          if(isAside&&vis){
+            const ac2=ac.isComplete?`rgba(80,220,150,0.8)`:`rgba(120,80,200,0.8)`;
+            const af=ac.isComplete?`rgba(80,220,150,0.12)`:`rgba(100,60,160,0.12)`;
+            ctx.fillStyle=af;ctx.fillRect(x,y,C,C);
+            ctx.strokeStyle=ac2;ctx.lineWidth=1.5;
+            ctx.setLineDash([2,3]);ctx.strokeRect(x+2,y+2,C-4,C-4);ctx.setLineDash([]);
+            drawEntranceArrow(ctx,x+C/2,y+C/2,aw,C,ac2);
+            ctx.strokeStyle=ac2;ctx.lineWidth=3;
+            if(aw===`bottom`){ctx.beginPath();ctx.moveTo(x+2,y+C);ctx.lineTo(x+C-2,y+C);ctx.stroke();}
+            else if(aw===`right`){ctx.beginPath();ctx.moveTo(x+C,y+2);ctx.lineTo(x+C,y+C-2);ctx.stroke();}
+            else if(aw===`top`){ctx.beginPath();ctx.moveTo(x+2,y);ctx.lineTo(x+C-2,y);ctx.stroke();}
+            else{ctx.beginPath();ctx.moveTo(x,y+2);ctx.lineTo(x,y+C-2);ctx.stroke();}
+          }
+        }
+      }
+
+      // Moss trail
+      if(visited&&!isPlayer&&!isExit&&!isEntr&&!isAsideEntr){
+        ctx.fillStyle='rgba(70,130,70,0.65)';
+        ctx.beginPath();ctx.arc(x+C/2-1,y+C/2,Math.max(2,C*0.07),0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='rgba(50,100,50,0.45)';
+        ctx.beginPath();ctx.arc(x+C/2+2,y+C/2+1,Math.max(1.5,C*0.05),0,Math.PI*2);ctx.fill();
+      }
+
+      // Letters
+      if(vis&&hasLetter&&!isExit&&!isEntr&&!isAsideEntr){
+        if(letterFound){
+          ctx.font=`bold ${Math.max(16,C*0.58)}px 'Share Tech Mono',monospace`;
+          ctx.textAlign='center';ctx.textBaseline='middle';
+          ctx.fillStyle='#a0f0a0';
+          ctx.fillText(letterCells[key].char,x+C/2,y+C/2);
+        } else {
+          drawDiamond(ctx,x+C/2,y+C/2,Math.max(3.5,C*0.15),'rgba(224,160,56,0.7)');
+        }
+      }
+
+      // Floor keys in main room
+      room.floorKeys.forEach(fk=>{
+        if(fk.collected||fk.row!==row||fk.col!==col||!vis||isExit||isEntr)return;
+        if(!fk.discovered){
+          drawDiamond(ctx,x+C/2,y+C/2,Math.max(3.5,C*0.15),'rgba(224,160,56,0.7)');
+        } else {
+          const pulse=room.pulseFrames['key_'+fk.row+'_'+fk.col+'_f']>0;
+          drawKey(ctx,x+C/2,y+C/2,C,pulse?'#ffffff':KEY_COLORS[fk.colorIdx],!fk.active&&!pulse);
+          if(isPlayer&&fk.active&&!isMobile){
+            ctx.font=`${Math.max(9,C*0.22)}px 'Share Tech Mono',monospace`;
+            ctx.textAlign='center';ctx.textBaseline='bottom';
+            ctx.fillStyle=KEY_COLORS[fk.colorIdx];
+            ctx.fillText('Enter: take',x+C/2,y+C-3);
+          }
+        }
+      });
+
+      const fa=fogA(room,row,col);
+      if(fa>0){ctx.fillStyle=`rgba(10,15,10,${fa})`;ctx.fillRect(x,y,C,C);}
+    }
+  }
+
+  // Walls
+  for(let row=0;row<ROWS;row++){
+    for(let col=0;col<COLS;col++){
+      const x=col*C,y=row*C;
+      const vH=isVis(room,row,col),vR=col+1<COLS&&isVis(room,row,col+1),vD=row+1<ROWS&&isVis(room,row+1,col);
+      const pH=player.visited.has(`${row}_${col}`),pR=player.visited.has(`${row}_${col+1}`),pD=player.visited.has(`${row+1}_${col}`);
+      if(maze[row][col].R&&(vH||vR)){
+        ctx.strokeStyle=pH||pR?'#8a6a38':'#c49040';
+        ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(x+C,y);ctx.lineTo(x+C,y+C);ctx.stroke();
+      }
+      if(maze[row][col].D&&(vH||vD)){
+        ctx.strokeStyle=pH||pD?'#8a6a38':'#c49040';
+        ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(x,y+C);ctx.lineTo(x+C,y+C);ctx.stroke();
+      }
+    }
+  }
+  ctx.strokeStyle='#c49040';ctx.lineWidth=3;ctx.strokeRect(1.5,1.5,COLS*C-3,ROWS*C-3);
+
+  // Raven — only in main room or alcove (handled above)
+  if(!alcove?.playerInAlcove){
+    drawRaven(ctx,player.c*C+C/2,player.r*C+C/2,C);
+  }
+
+  // Tick pulse frames
+  Object.keys(room.pulseFrames).forEach(k=>{if(room.pulseFrames[k]>0)room.pulseFrames[k]--;});
+
+  if(isMobile)drawTapZones(ctx,cv.width,ROWS*C,room,player);
+}
+
+function buildDecodeList(segments){
+  const all=[];
+  for(const seg of segments){
+    for(const c of seg.chars)all.push({char:c.char,globalIdx:c.globalIdx,isPunct:false});
+    if(seg.boundaryChar!=null&&seg.boundaryGlobalIdx!=null)all.push({char:seg.boundaryChar,globalIdx:seg.boundaryGlobalIdx,isPunct:true});
+    for(const ac of (seg.asideChains||[])){
+      all.push({char:ac.openChar,globalIdx:ac.openGIdx,isPunct:true});
+      for(const aseg of ac.segments){
+        for(const c of aseg.chars)all.push({char:c.char,globalIdx:c.globalIdx,isPunct:false});
+        if(aseg.boundaryChar!=null&&aseg.boundaryGlobalIdx!=null)all.push({char:aseg.boundaryChar,globalIdx:aseg.boundaryGlobalIdx,isPunct:true});
+      }
+      all.push({char:ac.closeChar,globalIdx:ac.closeGIdx,isPunct:true});
+    }
+  }
+  return all.sort((a,b)=>a.globalIdx-b.globalIdx);
+}
+let decodeList=[];
+
+function makeDchar(item){
+  const span=document.createElement('span');
+  if(item.char===' ')span.className='dchar space';
+  else{
+    span.className='dchar'+(item.isPunct?' punct':'')+(globalFound.has(item.globalIdx)?' found':'');
+    span.textContent=globalFound.has(item.globalIdx)?item.char:'?';
+  }
+  return span;
+}
+function getLockText(){
+  if(currentRoom>=rooms.length)return{cls:'open',text:'the scroll is complete'};
+  // ── In aside chain ──
+  if(inAside){
+    const ac=rooms[currentRoom].asideChains[asideChainIdx];
+    const ar=ac.rooms[asideRoomIdx];
+    const unlocked=ar.seg.chars.every(c=>globalFound.has(c.globalIdx));
+    if(ar.exitDoor){
+      const ec=cellOf(ar.exitDoor.wall,ar.exitDoor.pos);
+      if(ar.player.r===ec.r&&ar.player.c===ec.c){
+        if(!unlocked){const rem=ar.seg.chars.filter(c=>!globalFound.has(c.globalIdx)).length;return{cls:'locked',text:`${rem} glyph${rem!==1?'s':''} remain`};}
+        return{cls:'prompt',text:ar.isAsideLast?'the way yields. step back':`the way yields. step forward`};
+      }
+    }
+    if(unlocked)return{cls:'open',text:'the way lies open'};
+    const rem=ar.seg.chars.filter(c=>!globalFound.has(c.globalIdx)).length;
+    return{cls:'locked',text:`${rem} glyph${rem!==1?'s':''} remain`};
+  }
+  const room=rooms[currentRoom];
+  const unlocked=roomUnlocked(room);
+  const isKeyLock=room.seg.lockType==='key_here'||room.seg.lockType==='key_prior';
+  const keyName=isKeyLock?KEY_COLORS_NAMES[room.keyColorIdx%KEY_COLORS_NAMES.length]:null;
+
+  // Helper: find an active, uncollected key destined for the current room
+  function activeKeyForRoom(){
+    for(const r of rooms){
+      const keys=[...r.floorKeys,r.alcove?.key].filter(Boolean);
+      for(const k of keys){if(k.forRoom===currentRoom&&k.active&&!k.collected)return k;}
+    }
+    return null;
+  }
+
+  // ── Standing on a floor key ──
+  const fk=room.floorKeys.find(k=>!k.collected&&k.discovered&&k.row===room.player.r&&k.col===room.player.c);
+  if(fk){
+    const name=KEY_COLORS_NAMES[fk.colorIdx%KEY_COLORS_NAMES.length];
+    if(fk.active)return{cls:'prompt',text:`a ${name} key. press Enter to take it`};
+    return{cls:'locked',text:`a ${name} key. the time has not yet come`};
+  }
+
+  // ── In the grove — standing on a key ──
+  if(room.alcove?.playerInAlcove){
+    const k=room.alcove.key;
+    if(k&&k.discovered&&!k.collected&&k.row===room.alcove.playerRow&&k.col===room.alcove.playerCol){
+      const name=KEY_COLORS_NAMES[k.colorIdx%KEY_COLORS_NAMES.length];
+      if(k.active)return{cls:'prompt',text:`a ${name} key. press Enter to take it`};
+      return{cls:'locked',text:`a ${name} key. the time has not yet come`};
+    }
+    // Fall through to normal room logic for everything else in the grove
+  }
+
+  // ── On entrance threshold ──
+  if(hasLeftEntrance&&isOnEntranceCell()&&currentRoom>0){
+    return{cls:'prompt',text:'the path behind lies open'};
+  }
+
+  // ── On exit door ──
+  if(isOnExitDoor()){
+    if(isKeyLock){
+      if(!unlocked)return{cls:'locked',text:`seek the ${keyName} key`};
+      return{cls:'prompt',text:'the way yields. step forward'};
+    }
+    if(!unlocked){
+      const rem=room.seg.chars.filter(c=>!globalFound.has(c.globalIdx)).length;
+      return{cls:'locked',text:`${rem} glyph${rem!==1?'s':''} stand between you and the threshold`};
+    }
+    return{cls:'prompt',text:'the way yields. step forward'};
+  }
+
+  // ── General exploration ──
+  if(room.isLast){
+    const rem=room.seg.chars.filter(c=>!globalFound.has(c.globalIdx)).length;
+    if(rem>0)return{cls:'locked',text:`${rem} glyph${rem!==1?'s':''} remain`};
+    let asideRem=0;
+    rooms.forEach(r=>(r.asideChains||[]).forEach(ac=>ac.rooms.forEach(ar=>{
+      asideRem+=ar.seg.chars.filter(c=>!globalFound.has(c.globalIdx)).length;
+    })));
+    if(asideRem>0)return{cls:'locked',text:`${asideRem} glyph${asideRem!==1?'s':''} in hidden passages`};
+    return{cls:'open',text:'the inscription is complete'};
+  }
+  if(!room.exitDoor||room.seg.lockType==='none'){
+    return{cls:'open',text:'the way lies open'};
+  }
+  if(isKeyLock){
+    if(unlocked)return{cls:'open',text:'the way yields'};
+    const ak=activeKeyForRoom();
+    if(ak)return{cls:'prompt',text:`seek the ${keyName} key`};
+    return{cls:'locked',text:'the passage is sealed'};
+  }
+  if(unlocked)return{cls:'open',text:'the way yields'};
+  const rem=room.seg.chars.filter(c=>!globalFound.has(c.globalIdx)).length;
+  return{cls:'locked',text:`${rem} glyph${rem!==1?'s':''} remain`};
+}
+
+// Returns color name for a room that needs a key, or null
+function roomColorName(room){
+  if(!room)return null;
+  if(room.needsKey&&room.keyColorIdx>=0)return KEY_COLORS_NAMES[room.keyColorIdx];
+  return null;
+}
+
+function updateHUD(){
+  const lock=getLockText();
+  const room=currentRoom<rooms.length?rooms[currentRoom]:null;
+  const colorName=roomColorName(room);
+
+  // Mobile HUD
+  document.getElementById('hud-steps').textContent=steps+' steps';
+  const hl=document.getElementById('hud-lock');hl.className=lock.cls;hl.textContent=lock.text;
+
+  // Mobile room label
+  const hudRoom=document.getElementById('hud-room');
+  if(inAside){
+    const ac=rooms[currentRoom].asideChains[asideChainIdx];
+    hudRoom.innerHTML=`aside <span id="hud-room-cur">${asideRoomIdx+1}</span>/<span id="hud-room-tot">${ac.rooms.length}</span>`;
+  } else if(colorName){
+    hudRoom.innerHTML=`<span style="color:${KEY_COLORS[room.keyColorIdx]}">${colorName} clearing</span> <span style="color:var(--text3);font-size:10px">${currentRoom+1}/${rooms.length}</span>`;
+  } else {
+    hudRoom.innerHTML=`clearing <span id="hud-room-cur">${currentRoom+1}</span>/<span id="hud-room-tot">${rooms.length}</span>`;
+  }
+
+  // Build decode items for aside or full list
+  function asideDecodeItems(ac){
+    const items=[];
+    ac.segments.forEach(aseg=>{
+      aseg.chars.forEach(c=>items.push({char:c.char,globalIdx:c.globalIdx,isPunct:false}));
+      if(aseg.boundaryChar!=null&&aseg.boundaryGlobalIdx!=null)items.push({char:aseg.boundaryChar,globalIdx:aseg.boundaryGlobalIdx,isPunct:true});
+    });
+    return items.sort((a,b)=>a.globalIdx-b.globalIdx);
+  }
+  const activeDecodeList=inAside?asideDecodeItems(rooms[currentRoom].asideChains[asideChainIdx]):decodeList;
+
+  const mdw=document.getElementById('mobile-decode-wrap');mdw.innerHTML='';
+  activeDecodeList.forEach(item=>mdw.appendChild(makeDchar(item)));
+  const pct=activeDecodeList.length?Math.round(activeDecodeList.filter(d=>globalFound.has(d.globalIdx)).length/activeDecodeList.length*100):0;
+  document.getElementById('progress-fill').style.width=pct+'%';
+
+  // Desktop sidebar
+  document.getElementById('sidebar-steps').textContent=steps;
+
+  // Sidebar room label
+  const sidebarRoom=document.getElementById('sidebar-room');
+  if(inAside){
+    const ac=rooms[currentRoom].asideChains[asideChainIdx];
+    sidebarRoom.innerHTML=`aside <span id="sidebar-room-cur">${asideRoomIdx+1}</span> of <span id="sidebar-room-tot">${ac.rooms.length}</span>`;
+  } else if(colorName){
+    sidebarRoom.innerHTML=`<span style="color:${KEY_COLORS[room.keyColorIdx]};font-weight:bold">${colorName} clearing</span> <span style="color:var(--text3);font-size:10px">${currentRoom+1} of ${rooms.length}</span>`;
+  } else {
+    sidebarRoom.innerHTML=`clearing <span id="sidebar-room-cur">${currentRoom+1}</span> of <span id="sidebar-room-tot">${rooms.length}</span>`;
+  }
+
+  const rm=document.getElementById('room-map');rm.innerHTML='';
+  for(let i=0;i<rooms.length;i++){
+    const pip=document.createElement('div');
+    pip.className='room-pip'+(i===currentRoom?' current':i<currentRoom?' done':'');
+    if(rooms[i].needsKey&&rooms[i].keyColorIdx>=0){
+      pip.style.borderColor=KEY_COLORS[rooms[i].keyColorIdx];
+      if(i<currentRoom)pip.style.background=KEY_COLORS[rooms[i].keyColorIdx]+'44';
+    }
+    rm.appendChild(pip);
+  }
+  const sdw=document.getElementById('sidebar-decode-wrap');sdw.innerHTML='';activeDecodeList.forEach(item=>sdw.appendChild(makeDchar(item)));
+  document.getElementById('sidebar-progress-fill').style.width=pct+'%';
+  const sl=document.getElementById('sidebar-lock');if(sl){sl.className=lock.cls;sl.innerHTML=`<span>${lock.text}</span>`;}
+  const cp=document.getElementById('canvas-passage');cp.className=lock.cls;cp.textContent=lock.text;
+
+  // Inventory panel
+  const invPanel=document.getElementById('inventory-panel');
+  const invDisplay=document.getElementById('inventory-display');
+  if(inventory.length>0){
+    invPanel.style.display='block';
+    invDisplay.innerHTML='';
+    inventory.forEach(k=>{
+      const el=document.createElement('div');
+      el.className='inv-key';
+      el.style.color=KEY_COLORS[k.colorIdx];
+      el.style.borderColor=KEY_COLORS[k.colorIdx];
+      el.style.background=`rgba(${keyColorRGB(k.colorIdx)},0.08)`;
+      el.textContent=KEY_COLORS_NAMES[k.colorIdx]+' key';
+      invDisplay.appendChild(el);
+    });
+  } else {
+    invPanel.style.display='none';
+  }
+}
+
+function showVictory(){
+  const el=document.getElementById('victory');
+  el.style.display='block';
+  el.scrollIntoView({behavior:'smooth',block:'nearest'});
+
+  const fullMsg=currentMsg;
+  const msgEl=document.getElementById('victory-msg');
+  const statsEl=document.getElementById('victory-stats');
+  const actionsEl=document.getElementById('victory-actions');
+  msgEl.textContent='';
+  statsEl.className='';statsEl.textContent='';
+  actionsEl.className='';actionsEl.style.display='none';
+  document.getElementById('replay-canopy-section').style.display='none';
+  document.getElementById('replay-btn').textContent='wander again';
+
+  const SLOW=new Set(['.','!','?']);
+  const MED=new Set([',',';',':','"',"'"]);
+  let i=0,animId=null,done=false;
+
+  function finish(){
+    if(done)return;done=true;
+    if(animId)clearTimeout(animId);
+    msgEl.textContent='"'+fullMsg+'"';
+    showVictoryEnd();
+  }
+
+  function revealNext(){
+    if(i===0)msgEl.textContent='"';
+    if(i>=fullMsg.length){msgEl.textContent='"'+fullMsg+'"';showVictoryEnd();return;}
+    msgEl.textContent='"'+fullMsg.slice(0,i+1)+(i<fullMsg.length-1?'|':'"');
+    const ch=fullMsg[i];
+    const delay=SLOW.has(ch)?280:MED.has(ch)?120:30;
+    i++;
+    animId=setTimeout(revealNext,delay);
+  }
+
+  msgEl.onclick=finish;
+  revealNext();
+}
+
+function showVictoryEnd(){
+  const statsEl=document.getElementById('victory-stats');
+  const actionsEl=document.getElementById('victory-actions');
+  const roomCount=rooms.length;
+  statsEl.textContent=`${steps} steps through ${roomCount} ${roomCount===1?'clearing':'clearings'}`;
+  requestAnimationFrame(()=>{
+    statsEl.classList.add('visible');
+    actionsEl.style.display='flex';
+    requestAnimationFrame(()=>actionsEl.classList.add('visible'));
+  });
+}
+
+function initGame(raw){
+  const cleaned=raw.toLowerCase().split('').filter(c=>VALID.includes(c)).join('');
+  if(!cleaned)return;
+  currentMsg=cleaned;
+  setupCanvas();
+  const segments=parseMessage(cleaned);
+  rooms=buildRooms(segments);
+  currentRoom=0;steps=0;globalFound=new Set();
+  onDoor=false;onEntrance=false;hasLeftEntrance=false;
+  inAside=false;asideChainIdx=0;asideRoomIdx=0;
+  inventory=[];
+  decodeList=buildDecodeList(segments);
+  // Auto-collect: boundary chars from autoCollect segments + all spaces
+  segments.filter(s=>s.autoCollect).forEach(s=>{if(s.boundaryGlobalIdx!=null)globalFound.add(s.boundaryGlobalIdx);});
+  segments.forEach(s=>s.chars.filter(c=>c.char===' ').forEach(c=>globalFound.add(c.globalIdx)));
+  // Auto-collect aside delimiters and spaces within aside segments
+  segments.forEach(s=>{
+    (s.asideChains||[]).forEach(ac=>{
+      globalFound.add(ac.openGIdx);globalFound.add(ac.closeGIdx);
+      ac.segments.forEach(aseg=>{
+        aseg.chars.filter(c=>c.char===' ').forEach(c=>globalFound.add(c.globalIdx));
+        if(aseg.autoCollect&&aseg.boundaryGlobalIdx!=null)globalFound.add(aseg.boundaryGlobalIdx);
+      });
+    });
+  });
+  if(rooms.length){
+    const r0=rooms[0],sk=`${r0.player.r}_${r0.player.c}`;
+    if(r0.letterCells[sk]){r0.letterCells[sk].found=true;r0.foundLocal.add(r0.letterCells[sk].globalIdx);globalFound.add(r0.letterCells[sk].globalIdx);}
+    checkVictory();
+    checkKeyActivations();
+  }
+  document.getElementById('victory').style.display='none';
+  render();updateHUD();
+  if(!isMobile)document.getElementById('maze').focus();
+}
+
+document.querySelectorAll('.fog-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    fogRadius=parseFloat(btn.dataset.fog);
+    document.querySelectorAll('.fog-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll(`.fog-btn[data-fog="${btn.dataset.fog}"]`).forEach(b=>b.classList.add('active'));
+  });
+});
+document.getElementById('msg-in').addEventListener('input',function(){
+  if(document.getElementById('scroll-ready').style.display==='block')resetCastView();
+  const raw=this.value;
+  const cleaned=raw.toLowerCase().split('').filter(c=>VALID.includes(c)).join('');
+  const len=cleaned.length;
+
+  // Character counter
+  const cc=document.getElementById('char-count');
+  cc.textContent=len;
+  cc.className=len>=240?'full':len>=200?'warn':'';
+
+  // Room preview
+  const segs=parseMessage(cleaned);
+  let roomCount=segs.filter(s=>!s.autoCollect&&s.content.length>0).length;
+  segs.forEach(s=>(s.asideChains||[]).forEach(ac=>ac.segments.forEach(aseg=>{if(!aseg.autoCollect&&aseg.content.length>0)roomCount++;})));
+  document.getElementById('room-preview').textContent=
+    len>0?(roomCount===1?'1 clearing':`${roomCount} clearings`):'';
+
+  // Unsupported char warning
+  const stripped=[...new Set([...raw.toLowerCase()].filter(c=>c!=='\n'&&!VALID.includes(c)))];
+  const warn=document.getElementById('warn');
+  if(stripped.length){warn.style.display='block';warn.textContent='the maze won\'t carry: '+stripped.map(c=>`"${c}"`).join(', ');}
+  else warn.style.display='none';
+});
+function showCompose(){
+  document.getElementById('app').classList.remove('play-mode');
+  document.getElementById('app').classList.add('compose-mode');
+}
+function showPlay(){
+  document.getElementById('app').classList.remove('compose-mode');
+  document.getElementById('app').classList.add('play-mode');
+  if(window.innerWidth<=600)document.getElementById('decode-strip').classList.add('collapsed');
+}
+
+let castRaw='';
+function showScrollReady(){
+  document.getElementById('gen-btn').style.display='none';
+  document.getElementById('compose-canopy').style.display='none';
+  document.getElementById('scroll-ready').style.display='block';
+}
+function resetCastView(){
+  document.getElementById('gen-btn').style.display='';
+  document.getElementById('compose-canopy').style.display='';
+  document.getElementById('scroll-ready').style.display='none';
+  document.getElementById('compose-share-btn').textContent='copy link';
+  history.replaceState(null,'',window.location.pathname);
+}
+document.getElementById('gen-btn').addEventListener('click',()=>{
+  const raw=document.getElementById('msg-in').value;
+  if(!raw.trim())return;
+  const cleaned=raw.toLowerCase().split('').filter(c=>VALID.includes(c)).join('');
+  if(!cleaned)return;
+  castRaw=raw;
+  const encoded=encodeMessage(cleaned);
+  const cIdx=getCanopyIdx();
+  window.location.hash='m='+encoded+(cIdx>0?'&c='+cIdx:'');
+  showScrollReady();
+});
+document.getElementById('compose-share-btn').addEventListener('click',()=>{
+  const btn=document.getElementById('compose-share-btn');
+  navigator.clipboard.writeText(window.location.href).then(()=>{
+    btn.textContent='link copied';
+    setTimeout(()=>{btn.textContent='copy link';},2200);
+  }).catch(()=>{
+    try{
+      const ta=document.createElement('textarea');
+      ta.value=window.location.href;
+      ta.style.cssText='position:fixed;opacity:0;pointer-events:none';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      btn.textContent='link copied';
+      setTimeout(()=>{btn.textContent='copy link';},2200);
+    }catch(e){
+      btn.textContent='copy failed';
+      setTimeout(()=>{btn.textContent='copy link';},2200);
+    }
+  });
+});
+document.getElementById('enter-btn').addEventListener('click',()=>{
+  initGame(castRaw);
+  showPlay();
+});
+document.getElementById('new-scroll-btn').addEventListener('click',()=>{
+  history.replaceState(null,'',window.location.pathname);
+  resetCastView();
+  showCompose();
+});
+document.getElementById('strip-toggle').addEventListener('click',()=>{
+  document.getElementById('decode-strip').classList.toggle('collapsed');
+});
+document.getElementById('share-btn').addEventListener('click',()=>{
+  const btn=document.getElementById('share-btn');
+  navigator.clipboard.writeText(window.location.href).then(()=>{
+    btn.textContent='link copied';
+    setTimeout(()=>{btn.textContent='share this scroll';},2200);
+  }).catch(()=>{
+    try{
+      const ta=document.createElement('textarea');
+      ta.value=window.location.href;
+      ta.style.cssText='position:fixed;opacity:0;pointer-events:none';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      btn.textContent='link copied';
+      setTimeout(()=>{btn.textContent='share this scroll';},2200);
+    }catch(e){
+      btn.textContent='copy failed';
+      setTimeout(()=>{btn.textContent='share this scroll';},2200);
+    }
+  });
+});
+document.getElementById('replay-btn').addEventListener('click',()=>{
+  const section=document.getElementById('replay-canopy-section');
+  const showing=section.style.display==='block';
+  section.style.display=showing?'none':'block';
+  document.getElementById('replay-btn').textContent=showing?'wander again':'the canopy is yours to set';
+});
+document.getElementById('replay-go').addEventListener('click',()=>{
+  document.getElementById('victory').style.display='none';
+  initGame(currentMsg);
+});
+window.addEventListener('resize',()=>{if(rooms.length){setupCanvas();render();}});
+
+// ── Dev reset via ?reset param ────────────────────────────────────────────
+if(new URLSearchParams(window.location.search).has('reset')){
+  localStorage.removeItem('usnea_intro_seen');
+  localStorage.removeItem('usnea_receiver_seen');
+}
+
+// ── First-time intro overlay ───────────────────────────────────────────────
+(function(){
+  if(localStorage.getItem('usnea_intro_seen'))return;
+  if(window.location.hash.includes('m='))return;
+  const overlay=document.getElementById('intro-overlay');
+  overlay.style.display='flex';
+  requestAnimationFrame(()=>requestAnimationFrame(()=>overlay.classList.add('visible')));
+  function dismiss(){
+    overlay.classList.remove('visible');
+    overlay.addEventListener('transitionend',()=>overlay.style.display='none',{once:true});
+    localStorage.setItem('usnea_intro_seen','1');
+  }
+  document.getElementById('intro-btn').addEventListener('click',dismiss);
+  overlay.addEventListener('click',e=>{if(e.target===overlay)dismiss();});
+})();
+
+function loop(){pulseT++;if(rooms.length)render();requestAnimationFrame(loop);}
+setupCanvas();
+
+// Check for encoded scroll in URL hash on page load
+(function(){
+  const hash=window.location.hash;
+  const m=hash.match(/[#&]m=([^&]+)/);
+  const c=hash.match(/[#&]c=(\d)/);
+  if(m){
+    const decoded=decodeMessage(m[1]);
+    if(decoded){
+      if(c)applyCanopy(parseInt(c[1]));
+      initGame(decoded);
+      showPlay();
+      loop();
+      return;
+    }
+  }
+  showCompose();
+  loop();
+})();
+
+// ── Receiver arrival overlay + help button ────────────────────────────────
+(function(){
+  const overlay=document.getElementById('receiver-overlay');
+  document.getElementById('receiver-tips').textContent=isMobile
+    ?'swipe to move'
+    :'arrow keys to move';
+  function showReceiverOverlay(){
+    overlay.style.display='flex';
+    requestAnimationFrame(()=>requestAnimationFrame(()=>overlay.classList.add('visible')));
+  }
+  function dismissReceiverOverlay(){
+    overlay.classList.remove('visible');
+    overlay.addEventListener('transitionend',()=>overlay.style.display='none',{once:true});
+  }
+  document.getElementById('receiver-btn').addEventListener('click',dismissReceiverOverlay);
+  overlay.addEventListener('click',e=>{if(e.target===overlay)dismissReceiverOverlay();});
+  document.getElementById('help-btn').addEventListener('click',showReceiverOverlay);
+  if(window.location.hash.includes('m=')&&!localStorage.getItem('usnea_receiver_seen')){
+    localStorage.setItem('usnea_receiver_seen','1');
+    showReceiverOverlay();
+  }
+})();
+(()=>{
+  const overlay=document.getElementById('about-overlay');
+  function showAbout(){overlay.style.display='flex';requestAnimationFrame(()=>overlay.classList.add('visible'));}
+  function hideAbout(){overlay.classList.remove('visible');overlay.addEventListener('transitionend',()=>{overlay.style.display='none';},{once:true});}
+  overlay.addEventListener('click',e=>{if(e.target===overlay)hideAbout();});
+  document.getElementById('about-close').addEventListener('click',hideAbout);
+  document.getElementById('page-header').addEventListener('click',showAbout);
+  document.getElementById('hud-about-btn').addEventListener('click',showAbout);
+})();
+(()=>{
+  const overlay=document.getElementById('poem-overlay');
+  function showPoem(){overlay.style.display='flex';requestAnimationFrame(()=>requestAnimationFrame(()=>overlay.classList.add('visible')));}
+  function hidePoem(){overlay.classList.remove('visible');overlay.addEventListener('transitionend',()=>{overlay.style.display='none';},{once:true});}
+  overlay.addEventListener('click',hidePoem);
+  document.getElementById('title-heading').addEventListener('click',e=>{e.stopPropagation();showPoem();});
+})();
+</script>
+</body>
+</html>
