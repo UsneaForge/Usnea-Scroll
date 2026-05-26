@@ -2,7 +2,7 @@
 
 Write a phrase and share the link. Whoever receives it can navigate the same procedurally generated maze to discover it, letter by letter.
 
-No server. No account. The maze is encoded entirely in the URL.
+No account. The maze is encoded entirely in the URL.
 
 **Play it at [usnea-scroll.com](https://usnea-scroll.com)**
 
