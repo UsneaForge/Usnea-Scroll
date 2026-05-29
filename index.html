@@ -142,6 +142,8 @@ canvas{display:block;border:1px solid var(--border2);border-bottom:none;outline:
 .wf-input{color:var(--text2)}
 .wf-action{color:var(--text3)}
 .wf-enter{color:var(--gold)}
+#sidebar-help-btn{display:block;width:100%;margin-top:10px;padding:7px;font-size:10px;cursor:pointer;letter-spacing:.18em;border:1px solid var(--gold2);border-radius:3px;background:rgba(224,168,64,.05);color:var(--gold2);font-family:'Share Tech Mono',monospace;transition:all .2s;text-transform:uppercase;text-align:center}
+#sidebar-help-btn:hover{background:rgba(224,168,64,.12);color:var(--gold);border-color:var(--gold)}
 
 /* ── Victory ──────────────────────────────────────────────────────────────── */
 #victory{display:none;margin-top:1.4rem;padding:28px 24px;background:rgba(112,221,128,.05);border:1px solid var(--found2);border-radius:4px;text-align:center}
@@ -200,8 +202,8 @@ canvas{display:block;border:1px solid var(--border2);border-bottom:none;outline:
 #intro-btn,#receiver-btn{margin-top:28px;padding:11px 32px;font-size:11px;cursor:pointer;letter-spacing:.2em;border:1px solid var(--gold2);border-radius:3px;background:transparent;color:var(--gold);font-family:'Share Tech Mono',monospace;transition:all .2s;text-transform:uppercase}
 #intro-btn:hover,#receiver-btn:hover{background:rgba(224,168,64,.1);border-color:var(--gold)}
 /* ── Help button ──────────────────────────────────────────────────────────── */
-#help-btn{background:transparent;border:1px solid var(--border2);border-radius:3px;color:var(--text3);font-family:'Share Tech Mono',monospace;font-size:10px;padding:2px 6px;cursor:pointer;line-height:1;transition:color .2s,border-color .2s;flex-shrink:0}
-#help-btn:hover{color:var(--gold);border-color:var(--gold2)}
+#help-btn{background:rgba(224,168,64,.05);border:1px solid var(--gold2);border-radius:3px;color:var(--gold2);font-family:'Share Tech Mono',monospace;font-size:10px;padding:3px 8px;cursor:pointer;line-height:1;transition:color .2s,border-color .2s,background .2s;flex-shrink:0;letter-spacing:.1em}
+#help-btn:hover{color:var(--gold);border-color:var(--gold);background:rgba(224,168,64,.12)}
 /* ── Page header ────────────────────────────────────────────────────────────── */
 #page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.3rem}
 #about-trigger{display:flex;align-items:center;gap:8px;cursor:pointer;opacity:.55;transition:opacity .2s;flex-shrink:0;user-select:none}
@@ -322,11 +324,12 @@ canvas{display:block;border:1px solid var(--border2);border-bottom:none;outline:
   <div id="receiver-panel">
     <div id="receiver-title">Usnea Scroll</div>
     <div id="receiver-body">
-      <p>undergrowth shaped by the scroll</p>
-      <p>usnea's winding path</p>
+      <p>someone left a message for you, hidden in this forest</p>
+      <p>wander the clearings and find its secrets</p>
+      <p>glyphs unlock the inscription and reveal the path forward.</p>
       <p class="tips" id="receiver-tips"></p>
     </div>
-    <button id="receiver-btn">enter</button>
+    <button id="receiver-btn">enter the forest</button>
   </div>
 </div>
 <div id="app">
@@ -380,16 +383,7 @@ canvas{display:block;border:1px solid var(--border2);border-bottom:none;outline:
     <div id="hud-room">clearing <span id="hud-room-cur">1</span>/<span id="hud-room-tot">1</span></div>
     <div id="hud-steps">0 steps</div>
     <div id="hud-lock" class="open">-</div>
-    <button id="hud-about-btn" title="About Usnea Forge">
-      <svg width="16" height="16" viewBox="0 0 132.29166 132.29166" xmlns="http://www.w3.org/2000/svg">
-        <circle fill="#fefae0" stroke="#000" stroke-width="1.06" cx="66.476" cy="64.496" r="51.409"/>
-        <g transform="translate(-10.632458,-64.50358)" fill="#bc6c25" stroke="#000" stroke-width="0.95" stroke-linejoin="bevel">
-          <path d="m 76.778291,75.606778 c -29.522414,9.9e-5 -53.455034,23.932718 -53.455135,53.455132 9.7e-5,29.52242 23.932718,53.45504 53.455135,53.45514 29.522419,-1e-4 53.455039,-23.93272 53.455139,-53.45514 -1e-4,-29.522415 -23.93272,-53.455035 -53.455139,-53.455132 z m 0.287321,4.342371 c 3.234322,0.0023 6.468031,0.323934 9.637655,0.974101 11.269776,2.311703 21.642733,8.759652 28.703673,17.842321 7.06094,9.082669 10.75215,20.725869 10.21333,32.217669 -0.53881,11.4918 -5.30283,22.73844 -13.18266,31.12058 -7.87981,8.38216 -18.811128,13.83108 -30.247763,15.07815 -11.436634,1.24708 -23.285467,-1.71777 -32.786629,-8.20466 l 30.187305,-37.13262 c 0.17924,-0.22048 0.361232,-0.44086 0.575158,-0.62787 0.213927,-0.18701 0.459764,-0.3401 0.729672,-0.42891 0.269907,-0.0888 0.562124,-0.11191 0.841292,-0.0589 0.279168,0.0529 0.543833,0.18167 0.75706,0.36948 l 16.622758,13.23485 9.809737,-12.04991 -27.633456,-22.81979 -22.150069,-4.10415 c -0.514835,-0.0954 -1.03811,-0.18472 -1.559078,-0.13229 -0.520966,0.0524 -1.036011,0.25346 -1.412317,0.61754 -0.376306,0.36407 -0.599033,0.88814 -0.577225,1.41128 0.02181,0.52315 0.290014,1.03131 0.711067,1.34255 l 17.303854,15.30863 c 0.5377,0.69739 1.120851,1.32663 -0.268201,2.98173 L 43.038232,163.7952 c -5.303951,-5.1178 -9.424706,-11.45429 -11.951209,-18.3782 -3.943571,-10.80741 -3.894992,-23.0215 0.133842,-33.79742 4.028834,-10.77591 12.005077,-20.025913 22.071521,-25.59534 7.235256,-4.003026 15.507737,-6.081074 23.773226,-6.075081 z"/>
-        </g>
-        <path fill="#283618" stroke="#000" stroke-width="0.661" stroke-linecap="round" stroke-linejoin="round" d="m 98.293674,67.77999 c 0.72611,6.53528 0.49206,11.63639 3.848116,16.82905 -2.08841,-0.097 -4.176828,-0.45317 -6.265238,-3.50854 -1.88933,8.92741 -1.44858,12.35716 1.70511,17.2187 -2.51304,-2.05417 -7.17619,-4.77602 -6.88696,-3.15742 1.73024,9.68293 -1.2748,28.54956 -3.088258,31.92556 C 86.6096,104.78877 80.422478,98.22809 75.702495,115.93522 73.999828,110.54462 73.337863,102.35347 73.51923,96.94458 73.6967,91.65191 69.651464,92.7731 68.058905,104.40718 61.576322,98.85413 64.513557,90.97746 64.299765,83.85721 61.746978,83.35536 61.209874,88.79846 59.9141,91.12488 58.124792,88.54867 56.737065,85.06827 58.455397,80.25992 L 68.957912,67.341 l 1.305033,-1.05672 1.598203,0.31046 16.622738,13.23477 z"/>
-      </svg>
-    </button>
-    <button id="help-btn">?</button>
+    <button id="help-btn">how to play</button>
   </div>
   <div id="decode-strip">
     <button id="strip-toggle">the inscription <span id="strip-arrow"></span></button>
@@ -445,6 +439,7 @@ canvas{display:block;border:1px solid var(--border2);border-bottom:none;outline:
         <div class="wf-row"><span class="wf-input">arrow into door</span><span class="wf-action">pass through</span></div>
         <div class="wf-row"><span class="wf-input">arrow at threshold</span><span class="wf-action">retreat</span></div>
         <div class="wf-row"><span class="wf-enter">Enter</span><span class="wf-action">take key</span></div>
+        <button id="sidebar-help-btn">how to play</button>
       </div>
     </div>
   </div>
@@ -830,10 +825,9 @@ const RAVEN_SVG=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 250 200"><
 // White fill so we can tint it on canvas
 const RAVEN_URL='data:image/svg+xml;base64,'+btoa(RAVEN_SVG);
 let ravenImg=null;
-let ravenCache=null; // {C, main, outline} — rebuilt on CELL change
 (function preloadRaven(){
   const img=new Image();
-  img.onload=()=>{ravenImg=img;ravenCache=null;};
+  img.onload=()=>{ravenImg=img;};
   img.src=RAVEN_URL;
 })();
 
@@ -1672,15 +1666,16 @@ cv_el.addEventListener('touchend',e=>{
   // Short tap — check key pickup first, then quadrant fallback
   if(dist<12){
     const lx=ex-rect.left,ly=ey-rect.top;
+    const cssW=rect.width,cssH=rect.height;
     if(isOnActiveKey()){
       const btnR=Math.max(28,CELL*0.7);
-      const cx=cv_el.width/2,cy=cv_el.height/2;
+      const cx=cssW/2,cy=cssH/2;
       if(Math.sqrt((lx-cx)**2+(ly-cy)**2)<btnR){
         tryPickupKey();render();updateHUD();return;
       }
     }
-    const tx=lx-cv_el.width/2,ty=ly-cv_el.height/2;
-    if(Math.abs(tx)<cv_el.width*0.13&&Math.abs(ty)<cv_el.height*0.13)return;
+    const tx=lx-cssW/2,ty=ly-cssH/2;
+    if(Math.abs(tx)<cssW*0.13&&Math.abs(ty)<cssH*0.13)return;
     const dir=Math.abs(tx)>Math.abs(ty)?[0,tx>0?1:-1]:[ty>0?1:-1,0];
     handleArrow(dir[0],dir[1]);
     return;
@@ -1761,46 +1756,7 @@ function drawRaven(ctx,px,py,C){
   if(ravenImg){
     const svgW=C*1.3;
     const svgH=C*1.3*(200/250);
-    const w=Math.ceil(svgW),h=Math.ceil(svgH);
-
-    if(!ravenCache||ravenCache.C!==C||ravenCache.DPR!==DPR){
-      const pw=Math.ceil(w*DPR), ph=Math.ceil(h*DPR);//Size with scaling
-      // Build main (tinted) canvas
-      const main=document.createElement('canvas');
-      main.width=pw;main.height=ph;
-      const mc=main.getContext('2d');
-      mc.drawImage(ravenImg,0,0,pw,ph);
-      //mc.globalCompositeOperation='source-in';
-      //const tint=mc.createLinearGradient(0,0,w,h);
-      //tint.addColorStop(0,'#2a3a5a');
-      //tint.addColorStop(0.5,'#141820');
-      //tint.addColorStop(1,'#0a0c14');
-      //mc.fillStyle=tint;
-      //mc.fillRect(0,0,w,h);
-
-      // Build outline canvas (slightly larger, green tinted)
-      const out=document.createElement('canvas');
-      out.width=pw+2;out.height=ph+2;
-      const oc=out.getContext('2d');
-      oc.drawImage(ravenImg,0,0,pw+2,ph+2);
-      //oc.globalCompositeOperation='source-atop';
-      //oc.fillStyle='rgba(80,140,80,0.55)';
-      //oc.fillRect(0,0,w+2,h+2);
-
-      ravenCache={C, DPR, main, outline:out};
-    }
-
-    const drawX=px-svgW*0.5;
-    const drawY=py-svgH*0.5;
-
-    // Outline pass
-    //ctx.save();
-    //ctx.globalAlpha=0.45;
-    //ctx.drawImage(ravenCache.outline,drawX-1,drawY-1,svgW+2,svgH+2);
-    //ctx.restore();
-
-    // Main bird
-    ctx.drawImage(ravenCache.main,drawX,drawY,svgW,svgH);
+    ctx.drawImage(ravenImg,px-svgW*0.5,py-svgH*0.5,svgW,svgH);
   } else {
     ctx.fillStyle='#141820';
     ctx.beginPath();ctx.arc(px,py,Math.max(5,C*0.25),0,Math.PI*2);ctx.fill();
@@ -2731,8 +2687,8 @@ setupCanvas();
 (function(){
   const overlay=document.getElementById('receiver-overlay');
   document.getElementById('receiver-tips').textContent=isMobile
-    ?'swipe to move'
-    :'arrow keys to move';
+    ?'swipe or tap the edges to move · tap "how to play" anytime for help'
+    :'arrow keys to move · click "how to play" in the sidebar anytime';
   function showReceiverOverlay(){
     overlay.style.display='flex';
     requestAnimationFrame(()=>requestAnimationFrame(()=>overlay.classList.add('visible')));
@@ -2744,6 +2700,7 @@ setupCanvas();
   document.getElementById('receiver-btn').addEventListener('click',dismissReceiverOverlay);
   overlay.addEventListener('click',e=>{if(e.target===overlay)dismissReceiverOverlay();});
   document.getElementById('help-btn').addEventListener('click',showReceiverOverlay);
+  document.getElementById('sidebar-help-btn').addEventListener('click',showReceiverOverlay);
   if(window.location.hash.includes('m=')&&!localStorage.getItem('usnea_receiver_seen')){
     localStorage.setItem('usnea_receiver_seen','1');
     showReceiverOverlay();
@@ -2756,7 +2713,6 @@ setupCanvas();
   overlay.addEventListener('click',e=>{if(e.target===overlay)hideAbout();});
   document.getElementById('about-close').addEventListener('click',hideAbout);
   document.getElementById('page-header').addEventListener('click',showAbout);
-  document.getElementById('hud-about-btn').addEventListener('click',showAbout);
 })();
 (()=>{
   const overlay=document.getElementById('poem-overlay');
