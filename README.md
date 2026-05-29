@@ -24,3 +24,11 @@ Open `index.html`. That's it.
 *within the loom of broad branches*
 *a scroll of usnea is woven*
 *revealed by the undergrowth*
+
+---
+
+## License
+
+**Code:** MIT licensed — see LICENSE. Feel free to build from it, fork it, make it your own.
+
+**Creative assets:** Copyright © 2026 UsneaForge — all rights reserved. This includes the poetry and creative texts, the Usnea Forge wordmark and banner, and the Usnea Scroll name and identity. These may not be reproduced or reused without permission. If you build on this code bring your own world to it.
