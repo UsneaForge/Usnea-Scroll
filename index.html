@@ -71,7 +71,7 @@ h1:hover{opacity:1}
 #app.play-mode #compose-intro{display:none}
 
 /* ── Mobile HUD ───────────────────────────────────────────────────────────── */
-#hud-bar{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+#hud-bar{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap;user-select:none;-webkit-user-select:none}
 #hud-room{font-size:12px;color:var(--text2);white-space:nowrap}
 #hud-room span{color:var(--gold);font-weight:bold}
 #hud-steps{font-size:12px;color:var(--accent);white-space:nowrap;font-variant-numeric:tabular-nums}
@@ -105,7 +105,7 @@ h1:hover{opacity:1}
 /* ── Canvas ───────────────────────────────────────────────────────────────── */
 #canvas-outer{display:flex;flex-direction:column;align-items:center;margin-bottom:10px}
 canvas{display:block;border:1px solid var(--border2);border-bottom:none;outline:none;touch-action:none;border-radius:2px 2px 0 0}
-#canvas-passage{width:100%;padding:7px 12px;background:var(--bg2);border:1px solid var(--border2);border-radius:0 0 3px 3px;font-size:12px;text-align:center;letter-spacing:.05em}
+#canvas-passage{width:100%;padding:7px 12px;background:var(--bg2);border:1px solid var(--border2);border-radius:0 0 3px 3px;font-size:12px;text-align:center;letter-spacing:.05em;user-select:none;-webkit-user-select:none}
 #canvas-passage.locked{color:var(--door-locked)}
 #canvas-passage.open{color:var(--door-open)}
 #canvas-passage.prompt{color:var(--gold)}
@@ -244,6 +244,17 @@ canvas{display:block;border:1px solid var(--border2);border-bottom:none;outline:
   #about-trigger svg{width:36px;height:36px}
   #about-version,#about-label{font-size:13px}
 }
+
+/* ── Mobile D-pad ─────────────────────────────────────────────────────────── */
+#mobile-dpad{display:none;justify-content:center;margin:5px 0 2px}
+@media(max-width:600px){#mobile-dpad{display:flex}}
+.dpad-grid{display:grid;grid-template-columns:44px 44px 44px;grid-template-rows:44px 44px;gap:2px}
+.dpad-btn{width:44px;height:44px;background:var(--bg2);border:1px solid var(--border2);border-radius:3px;color:var(--text2);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:none;user-select:none;-webkit-user-select:none;transition:background .1s,border-color .1s,color .1s;font-family:'Share Tech Mono',monospace;line-height:1}
+.dpad-btn:active,.dpad-btn.held{background:rgba(90,176,255,.12);border-color:var(--accent2);color:var(--accent)}
+.dpad-up{grid-column:2;grid-row:1}
+.dpad-down{grid-column:2;grid-row:2}
+.dpad-left{grid-column:1;grid-row:1/3;align-self:center}
+.dpad-right{grid-column:3;grid-row:1/3;align-self:center}
 </style>
 </head>
 <body>
@@ -344,7 +355,7 @@ canvas{display:block;border:1px solid var(--border2);border-bottom:none;outline:
         <path fill="#283618" stroke="#000" stroke-width="0.661" stroke-linecap="round" stroke-linejoin="round" d="m 98.293674,67.77999 c 0.72611,6.53528 0.49206,11.63639 3.848116,16.82905 -2.08841,-0.097 -4.176828,-0.45317 -6.265238,-3.50854 -1.88933,8.92741 -1.44858,12.35716 1.70511,17.2187 -2.51304,-2.05417 -7.17619,-4.77602 -6.88696,-3.15742 1.73024,9.68293 -1.2748,28.54956 -3.088258,31.92556 C 86.6096,104.78877 80.422478,98.22809 75.702495,115.93522 73.999828,110.54462 73.337863,102.35347 73.51923,96.94458 73.6967,91.65191 69.651464,92.7731 68.058905,104.40718 61.576322,98.85413 64.513557,90.97746 64.299765,83.85721 61.746978,83.35536 61.209874,88.79846 59.9141,91.12488 58.124792,88.54867 56.737065,85.06827 58.455397,80.25992 L 68.957912,67.341 l 1.305033,-1.05672 1.598203,0.31046 16.622738,13.23477 z"/>
       </svg>
       <div id="about-meta">
-        <span id="about-version">v1.0.1</span>
+        <span id="about-version">v1.0.2</span>
         <span id="about-label">help/about</span>
       </div>
     </div>
@@ -404,6 +415,14 @@ canvas{display:block;border:1px solid var(--border2);border-bottom:none;outline:
       <div id="canvas-outer">
         <canvas id="maze" tabindex="0"></canvas>
         <div id="canvas-passage" class="open"><span>-</span></div>
+      </div>
+      <div id="mobile-dpad">
+        <div class="dpad-grid">
+          <button class="dpad-btn dpad-up" data-dr="-1" data-dc="0" aria-label="move up">▲</button>
+          <button class="dpad-btn dpad-left" data-dr="0" data-dc="-1" aria-label="move left">◀</button>
+          <button class="dpad-btn dpad-right" data-dr="0" data-dc="1" aria-label="move right">▶</button>
+          <button class="dpad-btn dpad-down" data-dr="1" data-dc="0" aria-label="move down">▼</button>
+        </div>
       </div>
     </div>
     <div id="sidebar">
@@ -1622,12 +1641,102 @@ function handleEnter(){
   tryPickupKey();render();updateHUD();
 }
 
+// ── Movement hold (d-pad + keyboard) ─────────────────────────────────────────
+// Hold a direction → repeats one step per tick. No corridor-following.
+let _glideInitialTimer=null,_glideIntervalTimer=null;
+const GLIDE_INITIAL_MS=150,GLIDE_REPEAT_MS=100;
+
+function startGlide(dr,dc){
+  stopGlide();
+  handleArrow(dr,dc);
+  _glideInitialTimer=setTimeout(()=>{
+    _glideInitialTimer=null;
+    _glideIntervalTimer=setInterval(()=>handleArrow(dr,dc),GLIDE_REPEAT_MS);
+  },GLIDE_INITIAL_MS);
+}
+
+function stopGlide(){
+  if(_glideInitialTimer){clearTimeout(_glideInitialTimer);_glideInitialTimer=null;}
+  if(_glideIntervalTimer){clearInterval(_glideIntervalTimer);_glideIntervalTimer=null;}
+}
+
+// ── Swipe glide (canvas swipe) ────────────────────────────────────────────────
+// Swipe → raven slides until a stop condition. Visibility is computed from the
+// SWIPE ORIGIN — so the raven runs exactly as far as you could see when you
+// swiped, then stops. This handles all canopy modes naturally:
+//   Sunlit   → all cells visible → full corridor run
+//   Fog modes → radius + visited visible from origin → run to that edge
+//   Midnight → radius-only from origin (visited don't persist) → short run
+// Additional stops: intersection, wall, door, new glyph, active key,
+//   alcove entrance, aside chain entrance.
+const SWIPE_GLIDE_MS=110;
+let _swipeGlideTimer=null;
+let _swipeOriginR=0,_swipeOriginC=0;
+
+function _nextCellVisibleFromOrigin(room,nr,nc){
+  if(fogRadius===0)return true;
+  const effR=fogRadius===-1?2.2:fogRadius;
+  // Non-midnight: previously visited cells remain visible
+  if(fogRadius!==-1&&room.player.visited.has(`${nr}_${nc}`))return true;
+  // Visibility radius measured from the swipe origin, not current position
+  return euclidean(_swipeOriginR,_swipeOriginC,nr,nc)<=effR;
+}
+
+function _canSwipeGlideContinue(dr,dc,newDiscovery){
+  if(inAside||currentRoom>=rooms.length)return false;
+  if(onDoor||onEntrance)return false;
+  const room=rooms[currentRoom];
+  if(room.alcove?.playerInAlcove)return false;
+  if(newDiscovery)return false;
+  const{r,c}=room.player;
+  if(room.floorKeys.some(k=>k.discovered&&k.active&&!k.collected&&k.row===r&&k.col===c))return false;
+  if(room.alcove){
+    for(const[ar,ac]of[[-1,0],[1,0],[0,-1],[0,1]]){
+      if(isAlcoveEntry(room,ar,ac))return false;
+    }
+  }
+  if(room.asideChains?.length){
+    for(const[ar,ac]of[[-1,0],[1,0],[0,-1],[0,1]]){
+      if(isAsideChainEntry(room,ar,ac)>=0)return false;
+    }
+  }
+  if(!canMoveMaze(room.maze,r,c,dr,dc))return false;
+  // Visibility: is the next cell visible from where the swipe started?
+  if(!_nextCellVisibleFromOrigin(room,r+dr,c+dc))return false;
+  // Intersection: any perpendicular exit = choice point → stop
+  const perps=dr!==0?[[0,-1],[0,1]]:[[-1,0],[1,0]];
+  for(const[pr,pc]of perps){if(canMoveMaze(room.maze,r,c,pr,pc))return false;}
+  return true;
+}
+
+function _swipeGlideStep(dr,dc){
+  const foundBefore=globalFound.size;
+  handleArrow(dr,dc);
+  const newDiscovery=globalFound.size>foundBefore;
+  if(!_canSwipeGlideContinue(dr,dc,newDiscovery)){_swipeGlideTimer=null;return;}
+  _swipeGlideTimer=setTimeout(()=>_swipeGlideStep(dr,dc),SWIPE_GLIDE_MS);
+}
+
+function startSwipeGlide(dr,dc){
+  if(_swipeGlideTimer){clearTimeout(_swipeGlideTimer);_swipeGlideTimer=null;}
+  // Capture origin for fog visibility calculations
+  if(currentRoom<rooms.length&&!inAside&&!rooms[currentRoom]?.alcove?.playerInAlcove){
+    _swipeOriginR=rooms[currentRoom].player.r;
+    _swipeOriginC=rooms[currentRoom].player.c;
+  }
+  _swipeGlideStep(dr,dc);
+}
+
 document.addEventListener('keydown',e=>{
   if(e.key==='Enter'){e.preventDefault();tryPickupKey();render();updateHUD();return;}
   if(!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key))return;
   e.preventDefault();
+  if(e.repeat)return; // we handle repeats ourselves via startGlide
   const map={ArrowUp:[-1,0],ArrowDown:[1,0],ArrowLeft:[0,-1],ArrowRight:[0,1]};
-  handleArrow(...map[e.key]);
+  startGlide(...map[e.key]);
+});
+document.addEventListener('keyup',e=>{
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key))stopGlide();
 });
 
 // Check if player is currently standing on a collectible key
@@ -1674,16 +1783,16 @@ cv_el.addEventListener('touchend',e=>{
         tryPickupKey();render();updateHUD();return;
       }
     }
-    const tx=lx-cssW/2,ty=ly-cssH/2;
-    if(Math.abs(tx)<cssW*0.13&&Math.abs(ty)<cssH*0.13)return;
-    const dir=Math.abs(tx)>Math.abs(ty)?[0,tx>0?1:-1]:[ty>0?1:-1,0];
-    handleArrow(dir[0],dir[1]);
+    // const tx=lx-cssW/2,ty=ly-cssH/2; // tap-to-move removed — d-pad handles mobile nav
+    // if(Math.abs(tx)<cssW*0.13&&Math.abs(ty)<cssH*0.13)return;
+    // const dir=Math.abs(tx)>Math.abs(ty)?[0,tx>0?1:-1]:[ty>0?1:-1,0];
+    // handleArrow(dir[0],dir[1]);
     return;
   }
 
-  // Swipe — direction from delta
+  // Swipe — glide through corridor until intersection/wall
   const dir=Math.abs(dx)>Math.abs(dy)?[0,dx>0?1:-1]:[dy>0?1:-1,0];
-  handleArrow(dir[0],dir[1]);
+  startSwipeGlide(dir[0],dir[1]);
 },{passive:false});
 
 function euclidean(r1,c1,r2,c2){return Math.sqrt((r1-r2)**2+(c1-c2)**2);}
@@ -1776,7 +1885,7 @@ function drawTapZones(ctx,W,H,room,player){
     else{ctx.moveTo(tx+s*1.1,ty);ctx.lineTo(tx-s*0.1,ty-s);ctx.lineTo(tx-s*0.1,ty+s);}
     ctx.closePath();ctx.fill();
   }
-  tri(W/2,pad,-1,0);tri(W/2,H-pad,1,0);tri(pad,H/2,0,-1);tri(W-pad,H/2,0,1);
+  // tri(W/2,pad,-1,0);tri(W/2,H-pad,1,0);tri(pad,H/2,0,-1);tri(W-pad,H/2,0,1); // edge arrows removed — d-pad handles mobile nav
 
   // Key pickup button — shown when standing on an active key
   if(isOnActiveKey()){
@@ -2687,7 +2796,7 @@ setupCanvas();
 (function(){
   const overlay=document.getElementById('receiver-overlay');
   document.getElementById('receiver-tips').textContent=isMobile
-    ?'swipe or tap the edges to move · tap "how to play" anytime for help'
+    ?'swipe to move, or use the arrow pad · tap "how to play" anytime for help'
     :'arrow keys to move · click "how to play" in the sidebar anytime';
   function showReceiverOverlay(){
     overlay.style.display='flex';
@@ -2721,6 +2830,21 @@ setupCanvas();
   overlay.addEventListener('click',hidePoem);
   document.getElementById('title-heading').addEventListener('click',e=>{e.stopPropagation();showPoem();});
 })();
+
+// ── D-pad wiring ──────────────────────────────────────────────────────────────
+document.querySelectorAll('.dpad-btn').forEach(btn=>{
+  const dr=parseInt(btn.dataset.dr),dc=parseInt(btn.dataset.dc);
+  btn.addEventListener('pointerdown',e=>{
+    e.preventDefault();
+    btn.classList.add('held');
+    btn.setPointerCapture(e.pointerId);
+    startGlide(dr,dc);
+  });
+  function endHold(){btn.classList.remove('held');stopGlide();}
+  btn.addEventListener('pointerup',endHold);
+  btn.addEventListener('pointercancel',endHold);
+  btn.addEventListener('pointerleave',endHold);
+});
 </script>
 </body>
 </html>
