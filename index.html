@@ -287,6 +287,17 @@ body.touch-mobile #sidebar{display:none}
 body.touch-mobile #mobile-fog{display:block}
 body.touch-mobile #hud-bar,body.touch-mobile #decode-strip{display:flex}
 
+/* ── Phone inscription strip: stacked layout ─────────────────────────────── */
+body.touch-mobile #decode-strip{flex-direction:column}
+body.touch-mobile #strip-toggle{order:1;margin-bottom:0;padding:5px 0;color:var(--text2)}
+body.touch-mobile #progress-bar{order:2;margin-top:6px}
+body.touch-mobile #decode-strip.collapsed #progress-bar{margin-top:6px}
+body.touch-mobile #mobile-decode-wrap{order:3;margin-top:10px;gap:5px}
+/* Replace tiny border-triangle with readable chevron characters */
+body.touch-mobile #decode-strip #strip-arrow{width:auto!important;height:auto!important;border:none!important;transform:none!important;font-size:10px;line-height:1;color:var(--accent2);letter-spacing:.1em}
+body.touch-mobile #strip-arrow::before{content:'hide'}
+body.touch-mobile #decode-strip.collapsed #strip-arrow::before{content:'reveal'}
+
 /* ── Landscape touch layout ──────────────────────────────────────────────── */
 body.touch-landscape #canvas-wrap{display:flex;flex-direction:row;align-items:flex-start;gap:8px}
 body.touch-landscape #mobile-dpad{flex-direction:column;align-items:center;justify-content:center;margin:0;align-self:stretch}
