@@ -28,6 +28,9 @@
   --found:#70dd80;--found2:#1a6830;
   --door-locked:#e05050;--door-open:#70dd80;
   --moss:#4a8050;--bark:#5a4028;
+  --dpad-btn:44px;
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+  --safe-right:env(safe-area-inset-right,0px);
 }
 html,body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monospace;overflow-x:hidden}
 #app{padding:20px 16px;max-width:860px;margin:0 auto;transition:max-width .25s}
@@ -192,7 +195,7 @@ canvas{display:block;border:1px solid var(--border2);border-bottom:none;outline:
   #hud-bar,#decode-strip{display:flex}
 }
 @media(min-width:601px){
-  #hud-bar,#decode-strip,#mobile-fog{display:none!important}
+  #hud-bar,#decode-strip,#mobile-fog{display:none}
   #desktop-layout{display:flex}
   #sidebar{display:flex}
 }
@@ -268,14 +271,29 @@ canvas{display:block;border:1px solid var(--border2);border-bottom:none;outline:
 
 /* ── Mobile D-pad ─────────────────────────────────────────────────────────── */
 #mobile-dpad{display:none;justify-content:center;margin:5px 0 2px}
-@media(max-width:600px){#mobile-dpad{display:flex}}
-.dpad-grid{display:grid;grid-template-columns:44px 44px 44px;grid-template-rows:44px 44px;gap:2px}
-.dpad-btn{width:44px;height:44px;background:var(--bg2);border:1px solid var(--border2);border-radius:3px;color:var(--text2);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:none;user-select:none;-webkit-user-select:none;transition:background .1s,border-color .1s,color .1s;font-family:'Share Tech Mono',monospace;line-height:1}
+body.touch-device #mobile-dpad{display:flex}
+.dpad-grid{display:grid;grid-template-columns:repeat(3,var(--dpad-btn));grid-template-rows:repeat(2,var(--dpad-btn));gap:2px}
+.dpad-btn{width:var(--dpad-btn);height:var(--dpad-btn);background:var(--bg2);border:1px solid var(--border2);border-radius:3px;color:var(--text2);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:none;user-select:none;-webkit-user-select:none;transition:background .1s,border-color .1s,color .1s;font-family:'Share Tech Mono',monospace;line-height:1}
 .dpad-btn:active,.dpad-btn.held{background:rgba(90,176,255,.12);border-color:var(--accent2);color:var(--accent)}
 .dpad-up{grid-column:2;grid-row:1}
 .dpad-down{grid-column:2;grid-row:2}
 .dpad-left{grid-column:1;grid-row:1/3;align-self:center}
 .dpad-right{grid-column:3;grid-row:1/3;align-self:center}
+
+/* ── Phone layout overrides (overrides min-width:601px rules via specificity) ── */
+body.touch-mobile #app{padding:12px}
+body.touch-mobile #desktop-layout{display:block}
+body.touch-mobile #sidebar{display:none}
+body.touch-mobile #mobile-fog{display:block}
+body.touch-mobile #hud-bar,body.touch-mobile #decode-strip{display:flex}
+
+/* ── Landscape touch layout ──────────────────────────────────────────────── */
+body.touch-landscape #canvas-wrap{display:flex;flex-direction:row;align-items:flex-start;gap:8px}
+body.touch-landscape #mobile-dpad{flex-direction:column;align-items:center;justify-content:center;margin:0;align-self:stretch}
+body.touch-landscape #hud-bar,body.touch-landscape #decode-strip,body.touch-landscape #mobile-fog{display:none}
+body.touch-landscape #new-scroll-btn{display:none}
+body.touch-landscape #canvas-passage{padding:3px 12px}
+body.touch-landscape #app{padding:4px 12px}
 </style>
 </head>
 <body>
@@ -390,7 +408,7 @@ canvas{display:block;border:1px solid var(--border2);border-bottom:none;outline:
         <path fill="#283618" stroke="#000" stroke-width="0.661" stroke-linecap="round" stroke-linejoin="round" d="m 98.293674,67.77999 c 0.72611,6.53528 0.49206,11.63639 3.848116,16.82905 -2.08841,-0.097 -4.176828,-0.45317 -6.265238,-3.50854 -1.88933,8.92741 -1.44858,12.35716 1.70511,17.2187 -2.51304,-2.05417 -7.17619,-4.77602 -6.88696,-3.15742 1.73024,9.68293 -1.2748,28.54956 -3.088258,31.92556 C 86.6096,104.78877 80.422478,98.22809 75.702495,115.93522 73.999828,110.54462 73.337863,102.35347 73.51923,96.94458 73.6967,91.65191 69.651464,92.7731 68.058905,104.40718 61.576322,98.85413 64.513557,90.97746 64.299765,83.85721 61.746978,83.35536 61.209874,88.79846 59.9141,91.12488 58.124792,88.54867 56.737065,85.06827 58.455397,80.25992 L 68.957912,67.341 l 1.305033,-1.05672 1.598203,0.31046 16.622738,13.23477 z"/>
       </svg>
       <div id="about-meta">
-        <span id="about-version">v1.0.3</span>
+        <span id="about-version">v1.0.4</span>
         <span id="about-label">help/about</span>
       </div>
     </div>
@@ -446,7 +464,7 @@ canvas{display:block;border:1px solid var(--border2);border-bottom:none;outline:
     </div>
   </div>
   <div id="desktop-layout">
-    <div>
+    <div id="canvas-wrap">
       <div id="canvas-outer">
         <canvas id="maze" tabindex="0"></canvas>
         <div id="canvas-passage" class="open"><span>-</span></div>
@@ -594,7 +612,7 @@ let globalFound=new Set();
 let onDoor=false,onEntrance=false,hasLeftEntrance=false;
 let inAside=false,asideChainIdx=0,asideRoomIdx=0;
 let inventory=[];
-let pulseT=0,isMobile=false;
+let pulseT=0,isMobile=false,isTouchDevice=false;
 let DPR = 1;
 
 // ── Raven SVG — preloaded as image for canvas drawing ─────────────────────────
@@ -890,20 +908,73 @@ let ravenImg=null;
 })();
 
 function setupCanvas(){
-  isMobile=window.innerWidth<=600;
+  isTouchDevice=navigator.maxTouchPoints>0;
+  isMobile=isTouchDevice&&Math.min(window.innerWidth,window.innerHeight)<=600;
+  const isLandscape=window.innerWidth>window.innerHeight;
+
+  // Set body classes FIRST so offsetHeight reads reflect hidden elements
+  document.body.classList.toggle('touch-device',isTouchDevice);
+  document.body.classList.toggle('touch-mobile',isMobile);
+  document.body.classList.toggle('touch-landscape',isMobile&&isLandscape);
+  document.body.classList.toggle('touch-portrait',isMobile&&!isLandscape);
+
   const cv=document.getElementById('maze');
-  DPR=window.devicePixelRatio||1; //Get device DPR for scaling
+  DPR=window.devicePixelRatio||1;
 
-  CELL=isMobile
-    ?Math.floor((Math.min(window.innerWidth,500)-20)/COLS)  // fills phone width
-    :Math.min(44,Math.floor((Math.min(window.innerWidth,820)-280)/COLS)); // sidebar ~240px
-  CELL=Math.max(26,CELL); // floor at 26px — 15*26=390px fits smallest phones
-  
-    const cssW=COLS*CELL, cssH=ROWS*CELL; //Get width and height for cells
-    cv.width=cssW*DPR;  cv.height=cssH*DPR; //Adjust width and height for DPR
-    cv.style.width=cssW+'px';  cv.style.height=cssH+'px'; //Set display to logical pixles
+  if(isMobile){
+    if(isLandscape){
+      // Use physical short side of screen — unaffected by URL bar visibility
+      const shortSide=Math.min(screen.width,screen.height);
+      const reservedH=80; // page-header + passage + padding + status bar buffer
+      CELL=Math.floor((shortSide-reservedH)/ROWS);
+      CELL=Math.max(16,Math.min(CELL,28));
+    }else{
+      CELL=Math.floor((Math.min(window.innerWidth,500)-20)/COLS);
+      CELL=Math.max(26,CELL);
+    }
+  }else{
+    CELL=Math.min(44,Math.floor((Math.min(window.innerWidth,820)-280)/COLS));
+  }
 
-    //cv.getContext('2d').scale(DPR,DPR); //Scale the 2D drawing to the logical pixles
+  const cssW=COLS*CELL,cssH=ROWS*CELL;
+  cv.width=cssW*DPR; cv.height=cssH*DPR;
+  cv.style.width=cssW+'px'; cv.style.height=cssH+'px';
+
+  sizeDpad();
+  // Re-run after browser settles: on initial load visualViewport.height is stale
+  // until Chrome finishes rendering its URL bar (~100-200ms after first paint)
+  if(isTouchDevice)setTimeout(sizeDpad,250);
+}
+
+function sizeDpad(){
+  if(!isTouchDevice)return;
+  const isLandscape=window.innerWidth>window.innerHeight;
+  const mazeW=COLS*CELL;
+  const mazeH=ROWS*CELL;
+  let btnSize;
+  if(isMobile&&isLandscape){
+    // Landscape: d-pad right of maze. innerWidth is stable (URL bar only affects height).
+    const availW=window.innerWidth-mazeW-8;
+    const byWidth=Math.floor((availW-4)/3);
+    const byHeight=Math.floor((mazeH-2)/2);
+    btnSize=Math.max(44,Math.min(byWidth,byHeight,110));
+  }else{
+    // Portrait (or tablet): use visualViewport.height — the actual visible height
+    // accounting for the URL bar. Falls back to innerHeight on older browsers.
+    const vh=window.visualViewport?window.visualViewport.height:window.innerHeight;
+    // Measure chrome heights above the canvas via offsetHeight (scroll-independent).
+    const topH=document.getElementById('page-header').offsetHeight
+              +document.getElementById('hud-bar').offsetHeight
+              +document.getElementById('decode-strip').offsetHeight
+              +(document.getElementById('new-scroll-btn').offsetHeight||0)
+              +40; // margins, gaps, app padding-top
+    const passageH=document.getElementById('canvas-passage').offsetHeight||34;
+    const availH=vh-topH-mazeH-passageH-20; // 20=dpad margin+app padding-bottom
+    const byHeight=Math.floor((availH-2)/2);
+    const byWidth=Math.floor((mazeW-4)/3);
+    btnSize=Math.max(44,Math.min(byHeight,byWidth,80));
+  }
+  document.documentElement.style.setProperty('--dpad-btn',btnSize+'px');
 }
 
 function rng(seed){let s=seed>>>0;return()=>{s=(Math.imul(1664525,s)+1013904223)>>>0;return s/0x100000000};}
@@ -1801,14 +1872,14 @@ function isOnActiveKey(){
 const cv_el=document.getElementById('maze');
 let _touchStart={x:0,y:0};
 cv_el.addEventListener('touchstart',e=>{
-  if(!isMobile)return;
+  if(!isTouchDevice)return;
   e.preventDefault();
   const t=e.changedTouches[0];
   _touchStart={x:t.clientX,y:t.clientY};
 },{passive:false});
 
 cv_el.addEventListener('touchend',e=>{
-  if(!isMobile)return;
+  if(!isTouchDevice)return;
   e.preventDefault();
   const t=e.changedTouches[0],rect=cv_el.getBoundingClientRect();
   const ex=t.clientX,ey=t.clientY;
@@ -2822,7 +2893,7 @@ function showCompose(){
 function showPlay(){
   document.getElementById('app').classList.remove('compose-mode');
   document.getElementById('app').classList.add('play-mode');
-  if(window.innerWidth<=600)document.getElementById('decode-strip').classList.add('collapsed');
+  if(isMobile)document.getElementById('decode-strip').classList.add('collapsed');
 }
 
 let castRaw='';
@@ -2950,6 +3021,8 @@ document.getElementById('replay-go').addEventListener('click',()=>{
   initGame(currentMsg);
 });
 window.addEventListener('resize',()=>{if(rooms.length){setupCanvas();render();}});
+// visualViewport fires when the URL bar shows/hides — resize dpad without re-rendering the maze
+if(window.visualViewport){window.visualViewport.addEventListener('resize',()=>{if(isTouchDevice)sizeDpad();});}
 
 // ── Dev reset via ?reset param ────────────────────────────────────────────
 if(new URLSearchParams(window.location.search).has('reset')){
@@ -2998,7 +3071,7 @@ setupCanvas();
 // ── Receiver arrival overlay + help button ────────────────────────────────
 (function(){
   const overlay=document.getElementById('receiver-overlay');
-  document.getElementById('receiver-tips').textContent=isMobile
+  document.getElementById('receiver-tips').textContent=isTouchDevice
     ?'swipe to move, or use the arrow pad · tap "how to play" anytime for help'
     :'arrow keys to move · click "how to play" in the sidebar anytime';
   function showReceiverOverlay(){
@@ -3035,19 +3108,36 @@ setupCanvas();
 })();
 
 // ── D-pad wiring ──────────────────────────────────────────────────────────────
-document.querySelectorAll('.dpad-btn').forEach(btn=>{
-  const dr=parseInt(btn.dataset.dr),dc=parseInt(btn.dataset.dc);
-  btn.addEventListener('pointerdown',e=>{
-    e.preventDefault();
-    btn.classList.add('held');
-    btn.setPointerCapture(e.pointerId);
-    startGlide(dr,dc);
-  });
-  function endHold(){btn.classList.remove('held');stopGlide();}
-  btn.addEventListener('pointerup',endHold);
-  btn.addEventListener('pointercancel',endHold);
-  btn.addEventListener('pointerleave',endHold);
+// Capture pointer at grid level so pointermove fires even as finger slides between buttons
+const _dpadGrid=document.querySelector('.dpad-grid');
+let _dpadActiveBtn=null;
+function _dpadActivate(btn){
+  if(_dpadActiveBtn===btn)return;
+  if(_dpadActiveBtn)_dpadActiveBtn.classList.remove('held');
+  _dpadActiveBtn=btn;
+  btn.classList.add('held');
+  startGlide(parseInt(btn.dataset.dr),parseInt(btn.dataset.dc));
+}
+function _dpadEnd(){
+  if(_dpadActiveBtn){_dpadActiveBtn.classList.remove('held');_dpadActiveBtn=null;}
+  stopGlide();
+}
+_dpadGrid.addEventListener('pointerdown',e=>{
+  const btn=e.target.closest('.dpad-btn');
+  if(!btn)return;
+  e.preventDefault();
+  _dpadGrid.setPointerCapture(e.pointerId);
+  _dpadActivate(btn);
 });
+_dpadGrid.addEventListener('pointermove',e=>{
+  if(!_dpadActiveBtn)return;
+  // elementFromPoint queries layout, not event routing, so works despite pointer capture
+  const el=document.elementFromPoint(e.clientX,e.clientY);
+  const btn=el&&el.closest('.dpad-btn');
+  if(btn)_dpadActivate(btn);
+});
+_dpadGrid.addEventListener('pointerup',_dpadEnd);
+_dpadGrid.addEventListener('pointercancel',_dpadEnd);
 </script>
 </body>
 </html>
