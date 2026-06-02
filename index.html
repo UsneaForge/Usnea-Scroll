@@ -145,17 +145,23 @@ canvas{display:block;border:1px solid var(--border2);border-bottom:none;outline:
 #sidebar-help-btn{display:block;width:100%;margin-top:10px;padding:7px;font-size:10px;cursor:pointer;letter-spacing:.18em;border:1px solid var(--gold2);border-radius:3px;background:rgba(224,168,64,.05);color:var(--gold2);font-family:'Share Tech Mono',monospace;transition:all .2s;text-transform:uppercase;text-align:center}
 #sidebar-help-btn:hover{background:rgba(224,168,64,.12);color:var(--gold);border-color:var(--gold)}
 
-/* ── Victory ──────────────────────────────────────────────────────────────── */
-#victory{display:none;margin-top:1.4rem;padding:28px 24px;background:rgba(112,221,128,.05);border:1px solid var(--found2);border-radius:4px;text-align:center}
+/* ── Victory overlay ──────────────────────────────────────────────────────── */
+#victory-backdrop{display:none;position:fixed;inset:0;background:rgba(5,10,5,.75);z-index:200;backdrop-filter:blur(2px)}
+#victory-backdrop.open{display:block}
+#victory{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:201;width:min(480px,calc(100vw - 32px));padding:36px 32px;background:var(--bg2);border:1px solid var(--found2);border-radius:6px;text-align:center;box-shadow:0 0 60px rgba(112,221,128,.08)}
+#victory.open{display:block}
 #victory-header{font-size:10px;color:var(--found);letter-spacing:.22em;text-transform:uppercase;margin-bottom:18px}
 #victory-ornament{color:var(--gold2);font-size:12px;letter-spacing:.5em;margin-bottom:18px}
-#victory-msg{font-family:'Cinzel',serif;font-size:18px;color:var(--gold);line-height:1.85;word-break:break-word;min-height:1.85em;cursor:pointer}
+#victory-msg{font-family:'Share Tech Mono',monospace;font-size:18px;color:var(--gold);line-height:1.85;word-break:break-word;min-height:1.85em;cursor:pointer}
 #victory-stats{font-size:11px;color:var(--text3);letter-spacing:.1em;margin-top:22px;opacity:0;transition:opacity .8s}
 #victory-stats.visible{opacity:1}
 #victory-actions{display:none;flex-direction:column;align-items:center;gap:10px;margin-top:18px;opacity:0;transition:opacity .8s .3s}
 #victory-actions.visible{opacity:1}
+#victory-action-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
 #share-btn{padding:8px 22px;font-size:11px;cursor:pointer;letter-spacing:.14em;border:1px solid var(--found2);border-radius:3px;background:transparent;color:var(--found);font-family:'Share Tech Mono',monospace;transition:all .15s;text-transform:uppercase}
 #share-btn:hover{background:rgba(112,221,128,.1);border-color:var(--found)}
+#victory-new-btn{padding:8px 22px;font-size:11px;cursor:pointer;letter-spacing:.14em;border:1px solid var(--border2);border-radius:3px;background:transparent;color:var(--text2);font-family:'Share Tech Mono',monospace;transition:all .15s;text-transform:uppercase}
+#victory-new-btn:hover{background:rgba(224,168,64,.06);border-color:var(--gold2);color:var(--gold)}
 #replay-btn{padding:8px 22px;font-size:11px;cursor:pointer;letter-spacing:.14em;border:1px solid var(--gold2);border-radius:3px;background:transparent;color:var(--gold);font-family:'Share Tech Mono',monospace;transition:all .15s;text-transform:uppercase}
 #replay-btn:hover{background:rgba(224,168,64,.1);border-color:var(--gold)}
 #replay-canopy-section{display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
@@ -462,13 +468,17 @@ canvas{display:block;border:1px solid var(--border2);border-bottom:none;outline:
       </div>
     </div>
   </div>
+  <div id="victory-backdrop"></div>
   <div id="victory">
     <div id="victory-header">- the inscription reveals itself -</div>
     <div id="victory-ornament">* * *</div>
     <div id="victory-msg"></div>
     <div id="victory-stats"></div>
     <div id="victory-actions">
-      <button id="share-btn">share this scroll</button>
+      <div id="victory-action-row">
+        <button id="share-btn">share this scroll</button>
+        <button id="victory-new-btn">new scroll</button>
+      </div>
       <button id="replay-btn">wander again</button>
       <div id="replay-canopy-section">
         <div id="replay-canopy-label" style="font-size:10px;color:var(--text3);letter-spacing:.18em;text-transform:uppercase;margin-bottom:8px">canopy</div>
@@ -1486,7 +1496,7 @@ function isOnExitDoor(){
 
 function handleArrow(dr,dc){
   if(!rooms.length)return;
-  if(document.getElementById('victory').style.display==='block')return;
+  if(document.getElementById('victory').classList.contains('open'))return;
   const room=rooms[currentRoom];
 
   // ── In aside chain ──
@@ -2529,8 +2539,8 @@ function updateHUD(){
 
 function showVictory(){
   const el=document.getElementById('victory');
-  el.style.display='block';
-  el.scrollIntoView({behavior:'smooth',block:'nearest'});
+  el.classList.add('open');
+  document.getElementById('victory-backdrop').classList.add('open');
 
   const fullMsg=currentMsg;
   const msgEl=document.getElementById('victory-msg');
@@ -2565,6 +2575,11 @@ function showVictory(){
 
   msgEl.onclick=finish;
   revealNext();
+}
+
+function closeVictory(){
+  document.getElementById('victory').classList.remove('open');
+  document.getElementById('victory-backdrop').classList.remove('open');
 }
 
 function showVictoryEnd(){
@@ -2610,7 +2625,7 @@ function initGame(raw){
     checkVictory();
     checkKeyActivations();
   }
-  document.getElementById('victory').style.display='none';
+  closeVictory();
   render();updateHUD();
   if(!isMobile)document.getElementById('maze').focus();
 }
@@ -2736,6 +2751,12 @@ document.getElementById('share-btn').addEventListener('click',()=>{
     }
   });
 });
+document.getElementById('victory-new-btn').addEventListener('click',()=>{
+  closeVictory();
+  history.replaceState(null,'',window.location.pathname);
+  resetCastView();
+  showCompose();
+});
 document.getElementById('replay-btn').addEventListener('click',()=>{
   const section=document.getElementById('replay-canopy-section');
   const showing=section.style.display==='block';
@@ -2743,7 +2764,7 @@ document.getElementById('replay-btn').addEventListener('click',()=>{
   document.getElementById('replay-btn').textContent=showing?'wander again':'the canopy is yours to set';
 });
 document.getElementById('replay-go').addEventListener('click',()=>{
-  document.getElementById('victory').style.display='none';
+  closeVictory();
   initGame(currentMsg);
 });
 window.addEventListener('resize',()=>{if(rooms.length){setupCanvas();render();}});
