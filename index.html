@@ -1881,6 +1881,7 @@ function startSwipeGlide(dr,dc){
 }
 
 document.addEventListener('keydown',e=>{
+  if(document.activeElement===document.getElementById('msg-in'))return;
   if(e.key==='Enter'){e.preventDefault();tryPickupKey();render();updateHUD();return;}
   if(!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key))return;
   e.preventDefault();
