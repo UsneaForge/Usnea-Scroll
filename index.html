@@ -1807,11 +1807,33 @@ function _nextCellVisibleFromOrigin(room,nr,nc){
   return euclidean(_swipeOriginR,_swipeOriginC,nr,nc)<=effR;
 }
 
+function _canSwipeGlideContinueAlcove(dr,dc,newDiscovery){
+  if(currentRoom>=rooms.length)return false;
+  const room=rooms[currentRoom];
+  const alcove=room.alcove;
+  if(!alcove?.playerInAlcove)return false;
+  if(newDiscovery)return false;
+  const pr=alcove.playerRow,pc=alcove.playerCol;
+  // Stop if standing on an active key
+  if(alcove.key?.discovered&&alcove.key.active&&!alcove.key.collected&&alcove.key.row===pr&&alcove.key.col===pc)return false;
+  // Stop if next move would exit the alcove (player is at the opening and pressing toward main room)
+  const{openWall,openPos}=alcove;
+  if(openWall==='bottom'&&dr===-1&&pr===0&&pc===openPos)return false;
+  if(openWall==='right'&&dc===-1&&pc===0&&pr===openPos)return false;
+  if(openWall==='left'&&dc===1&&pc===ACOLS-1&&pr===openPos)return false;
+  if(openWall==='top'&&dr===1&&pr===AROWS-1&&pc===openPos)return false;
+  if(!canMoveAlcove(alcove.maze,pr,pc,dr,dc))return false;
+  // Intersection: any perpendicular exit = choice point → stop
+  const perps=dr!==0?[[0,-1],[0,1]]:[[-1,0],[1,0]];
+  for(const[wr,wc]of perps){if(canMoveAlcove(alcove.maze,pr,pc,wr,wc))return false;}
+  return true;
+}
+
 function _canSwipeGlideContinue(dr,dc,newDiscovery){
   if(inAside||currentRoom>=rooms.length)return false;
   if(onDoor||onEntrance)return false;
   const room=rooms[currentRoom];
-  if(room.alcove?.playerInAlcove)return false;
+  if(room.alcove?.playerInAlcove)return _canSwipeGlideContinueAlcove(dr,dc,newDiscovery);
   if(newDiscovery)return false;
   const{r,c}=room.player;
   if(room.floorKeys.some(k=>k.discovered&&k.active&&!k.collected&&k.row===r&&k.col===c))return false;
@@ -1845,9 +1867,15 @@ function _swipeGlideStep(dr,dc){
 function startSwipeGlide(dr,dc){
   if(_swipeGlideTimer){clearTimeout(_swipeGlideTimer);_swipeGlideTimer=null;}
   // Capture origin for fog visibility calculations
-  if(currentRoom<rooms.length&&!inAside&&!rooms[currentRoom]?.alcove?.playerInAlcove){
-    _swipeOriginR=rooms[currentRoom].player.r;
-    _swipeOriginC=rooms[currentRoom].player.c;
+  if(currentRoom<rooms.length&&!inAside){
+    const alcove=rooms[currentRoom]?.alcove;
+    if(alcove?.playerInAlcove){
+      _swipeOriginR=alcove.playerRow;
+      _swipeOriginC=alcove.playerCol;
+    } else {
+      _swipeOriginR=rooms[currentRoom].player.r;
+      _swipeOriginC=rooms[currentRoom].player.c;
+    }
   }
   _swipeGlideStep(dr,dc);
 }
