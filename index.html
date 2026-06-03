@@ -1012,7 +1012,7 @@ function findAsideSpans(str){
   let i=0;
   while(i<str.length){
     const ch=str[i];
-    if(!ASIDE_OPEN_SET.has(ch)){i++;continue;}
+    if(!ASIDE_OPEN_SET.has(ch)||i===0){i++;continue;}
     const closeChar=ASIDE_PAIRS[ch];
     let j=i+1;
     while(j<str.length&&str[j]!==closeChar)j++;
