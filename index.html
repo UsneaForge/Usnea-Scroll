@@ -305,6 +305,10 @@ body.touch-landscape #hud-bar,body.touch-landscape #decode-strip,body.touch-land
 body.touch-landscape #new-scroll-btn{display:none}
 body.touch-landscape #canvas-passage{padding:3px 12px}
 body.touch-landscape #app{padding:4px 12px}
+
+/* ── Toast notification ───────────────────────────────────────────────────── */
+#toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);z-index:2000;padding:10px 18px;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;font-size:11px;color:var(--text2);letter-spacing:.06em;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .35s}
+#toast.visible{opacity:1;pointer-events:auto}
 </style>
 </head>
 <body>
@@ -394,6 +398,8 @@ body.touch-landscape #app{padding:4px 12px}
   </div>
 </div>
 
+
+<div id="toast"></div>
 
 <div id="newScrollConfirmation-overlay"> <!-- A panel to confirm if a user want's to leave the forest and write a new scroll -->
   <div id="newScrollConfirmation-panel">
@@ -2746,10 +2752,26 @@ function showVictoryEnd(){
 // ── Progress persistence (localStorage) ──────────────────────────────────────
 const PROGRESS_KEY='usnea_progress';
 
+let _toastTimer=null;
+function showToast(msg){
+  const el=document.getElementById('toast');
+  if(!el)return;
+  el.textContent=msg;
+  el.classList.add('visible');
+  if(_toastTimer)clearTimeout(_toastTimer);
+  _toastTimer=setTimeout(()=>el.classList.remove('visible'),4500);
+  el.onclick=()=>{el.classList.remove('visible');clearTimeout(_toastTimer);};
+}
+
+function roomStructureKey(){
+  return rooms.map(r=>r.seg.content).join('|');
+}
+
 function saveProgress(){
   if(!currentMsg||steps===0)return;
   const save={
     phrase:currentMsg,
+    structureKey:roomStructureKey(),
     currentRoom,steps,
     globalFound:[...globalFound],
     onDoor,onEntrance,hasLeftEntrance,
@@ -2788,6 +2810,7 @@ function restoreProgress(){
   try{save=JSON.parse(localStorage.getItem(PROGRESS_KEY));}catch{return false;}
   if(!save||save.phrase!==currentMsg)return false;
   if(save.completed){setTimeout(showVictory,400);return true;}
+  if(save.structureKey!==roomStructureKey()){clearProgress();setTimeout(()=>showToast('there was an issue loading saved progress, your maze has reset.'),400);return false;}
 
   currentRoom=save.currentRoom;
   steps=save.steps;
