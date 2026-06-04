@@ -1821,7 +1821,7 @@ function _canSwipeGlideContinueAlcove(dr,dc,newDiscovery){
   if(newDiscovery)return false;
   const pr=alcove.playerRow,pc=alcove.playerCol;
   // Stop if standing on an active key
-  if(alcove.key?.discovered&&alcove.key.active&&!alcove.key.collected&&alcove.key.row===pr&&alcove.key.col===pc)return false;
+  if(alcove.key?.discovered&&!alcove.key.collected&&alcove.key.row===pr&&alcove.key.col===pc)return false;
   // Stop if next move would exit the alcove (player is at the opening and pressing toward main room)
   const{openWall,openPos}=alcove;
   if(openWall==='bottom'&&dr===-1&&pr===0&&pc===openPos)return false;
@@ -1864,8 +1864,10 @@ function _canSwipeGlideContinue(dr,dc,newDiscovery){
 
 function _swipeGlideStep(dr,dc){
   const foundBefore=globalFound.size;
+  const wasInAlcove=currentRoom<rooms.length&&!!rooms[currentRoom]?.alcove?.playerInAlcove;
   handleArrow(dr,dc);
   const newDiscovery=globalFound.size>foundBefore;
+  if(wasInAlcove&&!rooms[currentRoom]?.alcove?.playerInAlcove){_swipeGlideTimer=null;return;}
   if(!_canSwipeGlideContinue(dr,dc,newDiscovery)){_swipeGlideTimer=null;return;}
   _swipeGlideTimer=setTimeout(()=>_swipeGlideStep(dr,dc),SWIPE_GLIDE_MS);
 }
@@ -2033,6 +2035,47 @@ function drawRaven(ctx,px,py,C){
 }
 
 
+function drawAlcoveExitHint(ctx,W,H,alcove,apr,apc){
+  const{openWall,openPos}=alcove;
+  const atOpening=(openWall==='bottom'&&apr===0&&apc===Math.min(openPos,ACOLS-1))||
+                  (openWall==='right'&&apc===0&&apr===Math.min(openPos,AROWS-1))||
+                  (openWall==='left'&&apc===ACOLS-1&&apr===Math.min(openPos,AROWS-1))||
+                  (openWall==='top'&&apr===AROWS-1&&apc===Math.min(openPos,ACOLS-1));
+  if(!atOpening)return;
+  const arrow=openWall==='bottom'?'▲':openWall==='right'?'◀':openWall==='left'?'▶':'▼';
+  const label=isTouchDevice?`tap ${arrow} to exit the grove`:`press ${arrow} to exit the grove`;
+  ctx.font=`bold ${Math.max(11,CELL*0.26)}px 'Share Tech Mono',monospace`;
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  const tw=ctx.measureText(label).width+18,th=24;
+  const tx=W/2,ty=H*0.72;
+  ctx.fillStyle='rgba(10,15,10,0.9)';
+  ctx.beginPath();ctx.roundRect(tx-tw/2,ty-th/2,tw,th,4);ctx.fill();
+  ctx.fillStyle='rgba(90,160,255,0.95)';
+  ctx.fillText(label,tx,ty);
+}
+
+function drawAlcoveEntryHint(ctx,W,H,room,player){
+  if(!room.alcove||room.alcove.playerInAlcove)return;
+  if(isOnActiveKey()||onDoor||onEntrance)return;
+  const{openWall,openPos}=room.alcove;
+  const{r,c}=player;
+  const atEntry=(openWall==='bottom'&&r===ROWS-1&&c===Math.min(openPos,COLS-1))||
+                (openWall==='right'&&c===COLS-1&&r===Math.min(openPos,ROWS-1))||
+                (openWall==='left'&&c===0&&r===Math.min(openPos,ROWS-1))||
+                (openWall==='top'&&r===0&&c===Math.min(openPos,COLS-1));
+  if(!atEntry)return;
+  const arrow=openWall==='bottom'?'▼':openWall==='right'?'▶':openWall==='left'?'◀':'▲';
+  const label=isTouchDevice?`tap ${arrow} to enter the grove`:`press ${arrow} to enter the grove`;
+  ctx.font=`bold ${Math.max(11,CELL*0.26)}px 'Share Tech Mono',monospace`;
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  const tw=ctx.measureText(label).width+18,th=24;
+  const tx=W/2,ty=H*0.72;
+  ctx.fillStyle='rgba(10,15,10,0.9)';
+  ctx.beginPath();ctx.roundRect(tx-tw/2,ty-th/2,tw,th,4);ctx.fill();
+  ctx.fillStyle='rgba(196,144,64,0.95)';
+  ctx.fillText(label,tx,ty);
+}
+
 function drawTapZones(ctx,W,H,room,player){
   const s=Math.max(11,CELL*0.3),pad=Math.max(12,CELL*0.38),alpha=0.35;
   function tri(tx,ty,dr,dc){
@@ -2075,21 +2118,35 @@ function drawTapZones(ctx,W,H,room,player){
     ctx.fillStyle=col;
     ctx.fillText(`take ${name} key`,cx,cy+btnR*0.65);
   } else if(!inAside&&(onDoor||onEntrance)){
-    const label=onEntrance?'tap back to retreat':'tap door direction to enter';
-    ctx.font=`bold ${Math.max(11,CELL*0.26)}px 'Share Tech Mono',monospace`;
-    ctx.textAlign='center';ctx.textBaseline='middle';
-    const tw=ctx.measureText(label).width+18,th=24;
-    const tx=W/2,ty=H*0.72;
-    ctx.fillStyle='rgba(10,15,10,0.9)';
-    ctx.beginPath();ctx.roundRect(tx-tw/2,ty-th/2,tw,th,4);ctx.fill();
-    ctx.fillStyle=onEntrance?'rgba(90,176,255,0.95)':'rgba(224,168,64,0.95)';
-    ctx.fillText(label,tx,ty);
+    const doorLocked=onDoor&&currentRoom<rooms.length&&!roomUnlocked(rooms[currentRoom]);
+    if(!doorLocked){
+      const tap=isTouchDevice;
+      const wallToArrow={top:'▲',bottom:'▼',left:'◀',right:'▶'};
+      const entranceArrow=wallToArrow[rooms[currentRoom]?.entranceWall]??'';
+      const exitArrow=wallToArrow[rooms[currentRoom]?.exitDoor?.wall]??'';
+      const arrow=onEntrance?entranceArrow:exitArrow;
+      const arrowStr=arrow?` ${arrow}`:'';
+      const label=onEntrance
+        ?(tap?`tap${arrowStr} to retreat`:`press${arrowStr} to retreat`)
+        :(tap?`tap${arrowStr} to enter`:`press${arrowStr} to enter`);
+      ctx.font=`bold ${Math.max(11,CELL*0.26)}px 'Share Tech Mono',monospace`;
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      const tw=ctx.measureText(label).width+18,th=24;
+      const tx=W/2,ty=H*0.72;
+      ctx.fillStyle='rgba(10,15,10,0.9)';
+      ctx.beginPath();ctx.roundRect(tx-tw/2,ty-th/2,tw,th,4);ctx.fill();
+      ctx.fillStyle=onEntrance?'rgba(90,176,255,0.95)':'rgba(224,168,64,0.95)';
+      ctx.fillText(label,tx,ty);
+    }
   } else if(inAside){
     const ac=rooms[currentRoom].asideChains[asideChainIdx];
     const ar=ac.rooms[asideRoomIdx];
+    const tap=isTouchDevice;
+    const wallToArrow={top:'▲',bottom:'▼',left:'◀',right:'▶'};
     const atEntry=asideRoomIdx===0&&ar.player.r===0&&ar.player.c===0;
     if(atEntry){
-      const label='tap direction to retreat';
+      const retreatArrow=wallToArrow[opposite(ac.openWall)]??'';
+      const label=tap?`tap ${retreatArrow} to retreat`:`press ${retreatArrow} to retreat`;
       ctx.font=`bold ${Math.max(11,CELL*0.26)}px 'Share Tech Mono',monospace`;
       ctx.textAlign='center';ctx.textBaseline='middle';
       const tw=ctx.measureText(label).width+18,th=24;
@@ -2101,7 +2158,8 @@ function drawTapZones(ctx,W,H,room,player){
     } else if(ar.exitDoor){
       const ec=cellOf(ar.exitDoor.wall,ar.exitDoor.pos);
       if(ar.player.r===ec.r&&ar.player.c===ec.c){
-        const label=ar.isAsideLast?`tap direction to return`:`tap door to continue`;
+        const exitArrow=wallToArrow[ar.exitDoor.wall]??'';
+        const label=ar.isAsideLast?(tap?`tap ${exitArrow} to return`:`press ${exitArrow} to return`):(tap?`tap ${exitArrow} to continue`:`press ${exitArrow} to continue`);
         ctx.font=`bold ${Math.max(11,CELL*0.26)}px 'Share Tech Mono',monospace`;
         ctx.textAlign='center';ctx.textBaseline='middle';
         const tw=ctx.measureText(label).width+18,th=24;
@@ -2267,7 +2325,8 @@ function render(){
     drawRaven(ctx,ox+apc*AC+AC/2,oy+apr*AC+AC/2,AC);
 
     Object.keys(room.pulseFrames).forEach(k=>{if(room.pulseFrames[k]>0)room.pulseFrames[k]--;});
-    if(isMobile)drawTapZones(ctx,(COLS*C),(ROWS*C),{maze:alcove.maze,player:{r:apr,c:apc}},{r:apr,c:apc});
+    drawTapZones(ctx,(COLS*C),(ROWS*C),{maze:alcove.maze,player:{r:apr,c:apc}},{r:apr,c:apc});
+    drawAlcoveExitHint(ctx,(COLS*C),(ROWS*C),alcove,apr,apc);
     return;
   }
 
@@ -2471,7 +2530,8 @@ function render(){
   // Tick pulse frames
   Object.keys(room.pulseFrames).forEach(k=>{if(room.pulseFrames[k]>0)room.pulseFrames[k]--;});
 
-  if(isMobile)drawTapZones(ctx,(COLS*C),ROWS*C,room,player);
+  drawTapZones(ctx,(COLS*C),ROWS*C,room,player);
+  if(!inAside)drawAlcoveEntryHint(ctx,(COLS*C),ROWS*C,room,player);
 }
 
 function buildDecodeList(segments){
@@ -2581,8 +2641,13 @@ function getLockText(){
     if(asideRem>0)return{cls:'locked',text:`${asideRem} glyph${asideRem!==1?'s':''} in hidden passages`};
     return{cls:'open',text:'the inscription is complete'};
   }
-  if(!room.exitDoor||room.seg.lockType==='none'){
+  if(!room.exitDoor){
     return{cls:'open',text:'the way lies open'};
+  }
+  if(room.seg.lockType==='none'){
+    if(unlocked)return{cls:'open',text:'the way lies open'};
+    const rem=room.seg.chars.filter(c=>!globalFound.has(c.globalIdx)).length;
+    return{cls:'locked',text:`${rem} glyph${rem!==1?'s':''} remain`};
   }
   if(isKeyLock){
     if(unlocked)return{cls:'open',text:'the way yields'};
@@ -3081,6 +3146,7 @@ document.getElementById('replay-btn').addEventListener('click',()=>{
 });
 document.getElementById('replay-go').addEventListener('click',()=>{
   closeVictory();
+  clearProgress();
   initGame(currentMsg);
 });
 window.addEventListener('resize',()=>{if(rooms.length){setupCanvas();render();}});
