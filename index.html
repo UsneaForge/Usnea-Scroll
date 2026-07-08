@@ -57,6 +57,9 @@ h1:hover{opacity:1}
 #char-count.full{color:var(--door-locked)}
 #char-max{color:var(--text3)}
 #room-preview{color:var(--gold2);margin-left:auto;letter-spacing:.06em}
+#compose-sound-btn{background:rgba(224,168,64,.08);border:1px solid var(--gold2);border-radius:3px;cursor:pointer;color:var(--gold);font-family:'Share Tech Mono',monospace;font-size:13px;line-height:1;padding:5px 10px;margin-left:8px;flex-shrink:0;transition:color .15s,border-color .15s,background .15s,opacity .15s}
+#compose-sound-btn:hover{color:var(--gold);border-color:var(--gold);background:rgba(224,168,64,.16)}
+#compose-sound-btn.muted{opacity:.55;text-decoration:line-through}
 #gen-btn{display:block;width:100%;margin-top:14px;padding:15px 20px;font-size:12px;cursor:pointer;letter-spacing:.22em;border:1px solid var(--gold);border-radius:3px;background:rgba(224,168,64,.07);color:var(--gold);font-family:'Share Tech Mono',monospace;transition:all .25s;text-transform:uppercase;text-shadow:0 0 14px rgba(224,168,64,.25)}
 #gen-btn:hover,#gen-btn:active{background:rgba(224,168,64,.16);border-color:var(--gold);box-shadow:0 0 28px rgba(224,168,64,.1),inset 0 0 10px rgba(224,168,64,.05);text-shadow:0 0 18px rgba(224,168,64,.45)}
 #warn{display:none;font-size:11px;color:#e08040;margin-top:6px;line-height:1.6}
@@ -145,8 +148,8 @@ canvas{display:block;border:1px solid var(--border2);border-bottom:none;outline:
 .wf-input{color:var(--text2)}
 .wf-action{color:var(--text3)}
 .wf-enter{color:var(--gold)}
-#sidebar-help-btn{display:block;width:100%;margin-top:10px;padding:7px;font-size:10px;cursor:pointer;letter-spacing:.18em;border:1px solid var(--gold2);border-radius:3px;background:rgba(224,168,64,.05);color:var(--gold2);font-family:'Share Tech Mono',monospace;transition:all .2s;text-transform:uppercase;text-align:center}
-#sidebar-help-btn:hover{background:rgba(224,168,64,.12);color:var(--gold);border-color:var(--gold)}
+#sidebar-help-btn,#sidebar-sound-btn{display:block;width:100%;margin-top:10px;padding:7px;font-size:10px;cursor:pointer;letter-spacing:.18em;border:1px solid var(--gold2);border-radius:3px;background:rgba(224,168,64,.05);color:var(--gold2);font-family:'Share Tech Mono',monospace;transition:all .2s;text-transform:uppercase;text-align:center}
+#sidebar-help-btn:hover,#sidebar-sound-btn:hover{background:rgba(224,168,64,.12);color:var(--gold);border-color:var(--gold)}
 
 /* ── Victory overlay ──────────────────────────────────────────────────────── */
 #victory-backdrop{display:none;position:fixed;inset:0;background:rgba(5,10,5,.75);z-index:200;backdrop-filter:blur(2px)}
@@ -226,8 +229,10 @@ canvas{display:block;border:1px solid var(--border2);border-bottom:none;outline:
 #newScrollConfirmation-cancel-btn:hover,#new-scroll-cancel-btn:hover{background:rgba(224,168,64,.1);border-color:var(--gold)}
 
 /* ── Help button ──────────────────────────────────────────────────────────── */
-#help-btn{background:rgba(224,168,64,.05);border:1px solid var(--gold2);border-radius:3px;color:var(--gold2);font-family:'Share Tech Mono',monospace;font-size:10px;padding:3px 8px;cursor:pointer;line-height:1;transition:color .2s,border-color .2s,background .2s;flex-shrink:0;letter-spacing:.1em}
-#help-btn:hover{color:var(--gold);border-color:var(--gold);background:rgba(224,168,64,.12)}
+#help-btn,#sound-btn{background:rgba(224,168,64,.05);border:1px solid var(--gold2);border-radius:3px;color:var(--gold2);font-family:'Share Tech Mono',monospace;font-size:10px;padding:3px 8px;cursor:pointer;line-height:1;transition:color .2s,border-color .2s,background .2s;flex-shrink:0;letter-spacing:.1em}
+#help-btn:hover,#sound-btn:hover{color:var(--gold);border-color:var(--gold);background:rgba(224,168,64,.12)}
+#sound-btn{font-size:13px;padding:2px 8px}
+#sound-btn.muted{opacity:.4;text-decoration:line-through}
 /* ── Page header ────────────────────────────────────────────────────────────── */
 #page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.3rem}
 #about-trigger{display:flex;align-items:center;gap:8px;cursor:pointer;opacity:.55;transition:opacity .2s;flex-shrink:0;user-select:none}
@@ -438,6 +443,7 @@ body.touch-landscape #app{padding:4px 12px}
     <div id="char-counter-row">
       <span id="char-count">0</span><span id="char-max"> / 250</span>
       <span id="room-preview"></span>
+      <button id="compose-sound-btn" aria-label="toggle sound" aria-pressed="false" title="sound on">♪</button>
     </div>
     <div id="warn"></div>
     <button id="gen-btn">cast the scroll</button>
@@ -464,6 +470,7 @@ body.touch-landscape #app{padding:4px 12px}
     <div id="hud-room">clearing <span id="hud-room-cur">1</span>/<span id="hud-room-tot">1</span></div>
     <div id="hud-steps">0 steps</div>
     <div id="hud-lock" class="open">-</div>
+    <button id="sound-btn" aria-label="toggle sound" aria-pressed="false" title="sound on">♪</button>
     <button id="help-btn">how to play</button>
   </div>
   <div id="decode-strip">
@@ -528,6 +535,7 @@ body.touch-landscape #app{padding:4px 12px}
         <div class="wf-row"><span class="wf-input">arrow into door</span><span class="wf-action">pass through</span></div>
         <div class="wf-row"><span class="wf-input">arrow at threshold</span><span class="wf-action">retreat</span></div>
         <div class="wf-row"><span class="wf-enter">Enter</span><span class="wf-action">take key</span></div>
+        <button id="sidebar-sound-btn" aria-pressed="false">sound: on</button>
         <button id="sidebar-help-btn">how to play</button>
       </div>
     </div>
@@ -3013,8 +3021,320 @@ document.getElementById('msg-in').addEventListener('input',function(){
   const warn=document.getElementById('warn');
   if(stripped.length){warn.style.display='block';warn.textContent='the maze won\'t carry: '+stripped.map(c=>`"${c}"`).join(', ');}
   else warn.style.display='none';
+  // (Audio is tied to the cast scroll only — typing never changes it; see the cast handler.)
 });
+// ── Forest audio ───────────────────────────────────────────────────────────
+// A tonal-leaning generative soundscape grown from the inscription — a companion
+// piece, not a forest simulator. Three layers + shared space:
+//   drone   = unique boundary chars (. ! ? ; , ')  → low sustained harmonic bed (the floor)
+//   wind    = filtered noise + slow tonal swells    → the flowing middle layer (depth)
+//   critters= clustered, stochastic high events      → sparse flurries-then-silence (life)
+//   reverb  = a shared decaying-noise space everything sits inside
+// All "randomness" is SEEDED from hash(message) — the same maze seed — so the same words
+// always grow the same forest; the randomness is texture, the determinism is identity.
+// Web Audio API only: no files, no libraries.
+const ForestAudio=(()=>{
+  let ctx=null,master=null,voiceBus=null,reverb=null,noiseBuf=null;
+  let muted=localStorage.getItem('usnea_muted')==='1';
+  let droneVoices=[];             // [{osc,lfo,gain,ch}] sustained bed voices
+  let wind=null;                  // {src,sweep,swell,gain} continuous noise bed
+  let pads=[];                    // [{oscs,g,end}] slow mid swells in flight (self-cleaning)
+  let scene=null;                 // {rand,critterPitches,midPitches,density,burst} seeded state
+  let critterTimer=null,padTimer=null;
+  let sig='',playing=false;       // sig = the playing message, to skip redundant restarts
+
+  // Phrygian scale (chosen) — semitone offsets from the key's root. The flat-2nd is what
+  // gives the forest its ancient, faintly-uneasy colour.
+  const PHRYGIAN=[0,1,3,5,7,8,10];
+  const DRONE_DEGREES=[0,5,7];    // root/4th/5th only — a safe foundation in either mode
+  const PAD_POOL=[0,3,5,7,10,12]; // consonant degrees the mid swells draw a small per-phrase chord from
+  const DRONE_BASE=110;           // A2 — low bed
+  const MID_BASE=196;             // ~G3 — lifted clear of the drone so the swells aren't muddied
+  const CRITTER_BASE=392;         // ~G4 — high and present, where the ear is most sensitive
+  // Levels & timing — the dials we tune by ear (kept named so tuning is a one-line change).
+  const DRONE_PEAK=0.10, WIND_LEVEL=0.05, MID_LEVEL=0.05, CRITTER_LEVEL=0.15, REVERB_WET=0.6;
+  const CRITTER_GAP_MIN=1.6, CRITTER_GAP_RANGE=4.0;   // seconds of silence between flurries
+  const semis=(base,n)=>base*Math.pow(2,n/12);        // n semitones above base, in Hz
+
+  function ensureCtx(){
+    if(ctx)return ctx;
+    ctx=new (window.AudioContext||window.webkitAudioContext)();
+    master=ctx.createGain();
+    master.gain.value=muted?0:1;
+    // A limiter on the master so the stacked layers can run hot without clipping.
+    const limiter=ctx.createDynamicsCompressor();
+    limiter.threshold.value=-3;limiter.knee.value=4;limiter.ratio.value=10;
+    limiter.attack.value=0.003;limiter.release.value=0.25;
+    master.connect(limiter).connect(ctx.destination);
+    // Shared reverb: a decaying-noise impulse response puts everything inside one space.
+    const irLen=Math.floor(ctx.sampleRate*2.6);
+    const ir=ctx.createBuffer(2,irLen,ctx.sampleRate);
+    for(let chn=0;chn<2;chn++){
+      const d=ir.getChannelData(chn);
+      for(let i=0;i<irLen;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/irLen,2.6); // exp decay
+    }
+    reverb=ctx.createConvolver();reverb.buffer=ir;
+    const wet=ctx.createGain();wet.gain.value=REVERB_WET;
+    reverb.connect(wet).connect(master);
+    // Pads + critters share a gentle lowpass (rounds the synthy edge), sent dry AND to reverb.
+    voiceBus=ctx.createBiquadFilter();
+    voiceBus.type='lowpass';voiceBus.frequency.value=2400;voiceBus.Q.value=0.5;
+    voiceBus.connect(master);voiceBus.connect(reverb);
+    // One white-noise buffer, reused (looped) by the wind layer.
+    noiseBuf=ctx.createBuffer(1,Math.floor(ctx.sampleRate*2),ctx.sampleRate);
+    const nd=noiseBuf.getChannelData(0);
+    for(let i=0;i<nd.length;i++)nd[i]=Math.random()*2-1;
+    if(ctx.state==='suspended')armUnlock();   // a shared link that auto-enters has no gesture yet
+    return ctx;
+  }
+  // Browsers block audio until the user interacts. Clicking "enter the forest" already
+  // counts; a shared link that auto-enters does not — so resume on the first interaction.
+  function armUnlock(){
+    const go=()=>{
+      if(ctx&&ctx.state==='suspended')ctx.resume();
+      ['pointerdown','keydown','touchstart'].forEach(e=>window.removeEventListener(e,go));
+    };
+    ['pointerdown','keydown','touchstart'].forEach(e=>window.addEventListener(e,go));
+  }
+
+  // ── Drone: the low harmonic floor (one sustained voice per unique boundary char) ─────
+  function droneChars(message){
+    const chars=[...new Set([...message])].filter(c=>BOUNDARY.has(c));
+    return chars.length?chars:['.'];          // no punctuation → still anchor on the root
+  }
+  function addDroneVoice(ch,base){
+    const idx=Math.max(0,VALID.indexOf(ch));
+    const deg=DRONE_DEGREES[idx%DRONE_DEGREES.length];   // one low octave only — stays a foundation
+    const now=ctx.currentTime;
+    const osc=ctx.createOscillator();
+    osc.type='sine';                          // purest, softest timbre
+    osc.frequency.value=semis(base,deg);
+    osc.detune.value=(Math.random()*2-1)*8;   // ±8 cents — never perfectly, sterilely in tune
+    const gain=ctx.createGain();
+    gain.gain.value=0;
+    gain.gain.linearRampToValueAtTime(DRONE_PEAK,now+2.5);  // slow bloom, no attack edge
+    const lfo=ctx.createOscillator();         // breathing: nudges the gain up and down
+    lfo.type='sine';
+    lfo.frequency.value=0.07+Math.random()*0.05;         // ~0.1Hz, sub-audible
+    const lfoAmt=ctx.createGain();
+    lfoAmt.gain.value=0.03;
+    lfo.connect(lfoAmt).connect(gain.gain);
+    osc.connect(gain).connect(master);        // dry, keeps the low end clean
+    osc.start(now);lfo.start(now);
+    droneVoices.push({osc,lfo,gain,ch});      // remember the char so we can diff on the fly
+  }
+  function fadeOutVoice(v){
+    try{
+      const now=ctx.currentTime;
+      v.gain.gain.cancelScheduledValues(now);
+      v.gain.gain.setValueAtTime(v.gain.gain.value,now);
+      v.gain.gain.linearRampToValueAtTime(0,now+0.8);    // fade out, don't click
+      v.osc.stop(now+0.9);v.lfo.stop(now+0.9);
+    }catch(e){}
+  }
+  function buildDrone(message,rootMul){
+    droneChars(message).forEach(ch=>addDroneVoice(ch,DRONE_BASE*rootMul));
+  }
+
+  // ── Wind: continuous filtered noise + fluctuation (the flowing middle, textural half) ─
+  function startWind(){
+    if(wind||!ctx)return;                     // one wind bed (idempotent guard)
+    const now=ctx.currentTime;
+    const src=ctx.createBufferSource();src.buffer=noiseBuf;src.loop=true;
+    const bp=ctx.createBiquadFilter();bp.type='bandpass';bp.frequency.value=480;bp.Q.value=0.9;
+    const gain=ctx.createGain();gain.gain.value=0;
+    gain.gain.linearRampToValueAtTime(WIND_LEVEL,now+5);   // very slow fade-in
+    const sweep=ctx.createOscillator();sweep.type='sine';sweep.frequency.value=0.045; // the gust moving
+    const sweepAmt=ctx.createGain();sweepAmt.gain.value=260;
+    sweep.connect(sweepAmt).connect(bp.frequency);
+    const swell=ctx.createOscillator();swell.type='sine';swell.frequency.value=0.07;  // its strength
+    const swellAmt=ctx.createGain();swellAmt.gain.value=WIND_LEVEL*0.6;
+    swell.connect(swellAmt).connect(gain.gain);
+    src.connect(bp).connect(gain);
+    gain.connect(master);gain.connect(reverb);
+    src.start(now);sweep.start(now);swell.start(now);
+    wind={src,sweep,swell,gain,bp};
+  }
+  function stopWind(){
+    if(!wind)return;
+    const now=ctx.currentTime,w=wind;wind=null;
+    try{
+      w.gain.gain.cancelScheduledValues(now);
+      w.gain.gain.setValueAtTime(w.gain.gain.value,now);
+      w.gain.gain.linearRampToValueAtTime(0,now+1.2);
+      w.src.stop(now+1.3);w.sweep.stop(now+1.3);w.swell.stop(now+1.3);
+    }catch(e){}
+  }
+  // Shift the air's timbre per message — a subtle, ever-present differentiator (the wind is
+  // always there, so even a small filter move makes each phrase's forest feel its own).
+  function tuneWind(message){
+    if(!wind)return;
+    const target=360+(hash('wind'+message)%260);  // 360–620Hz bandpass centre, seeded by the phrase
+    const now=ctx.currentTime;
+    wind.bp.frequency.cancelScheduledValues(now);
+    wind.bp.frequency.setValueAtTime(wind.bp.frequency.value,now);
+    wind.bp.frequency.linearRampToValueAtTime(target,now+2.5);   // glide, don't jump
+  }
+
+  // ── Mid swells: slow overlapping tonal pads (the flowing middle, tonal half) ──────────
+  function spawnPad(){
+    if(!scene){padTimer=null;return;}
+    const r=scene.padRand;
+    if(ctx&&ctx.state==='running'&&scene.midPitches.length){
+      const now=ctx.currentTime;
+      const freq=scene.midPitches[Math.floor(r()*scene.midPitches.length)];
+      const rise=2.5+r()*2.5,hold=2+r()*3,fall=3+r()*3,peak=MID_LEVEL*(0.6+r()*0.4);
+      const g=ctx.createGain();g.gain.value=0.0001;
+      g.gain.linearRampToValueAtTime(peak,now+rise);          // long bloom
+      g.gain.setValueAtTime(peak,now+rise+hold);
+      g.gain.linearRampToValueAtTime(0.0001,now+rise+hold+fall); // long fall — overlaps the next
+      const end=now+rise+hold+fall+0.1;
+      // two slightly-detuned triangle voices → a richer, more tonal pad than a bare sine
+      const oscs=[-1,1].map(sign=>{
+        const o=ctx.createOscillator();o.type='triangle';o.frequency.value=freq;
+        o.detune.value=sign*(5+r()*4);                        // a few cents apart — shimmer & width
+        o.frequency.linearRampToValueAtTime(freq*(1+(r()*2-1)*0.01),end);  // slow drift, sounds alive
+        o.connect(g);o.start(now);o.stop(end);return o;
+      });
+      g.connect(voiceBus);
+      pads.push({oscs,g,end});
+      pads=pads.filter(p=>p.end>now-0.1);     // prune the finished
+    }
+    padTimer=setTimeout(spawnPad,(2.5+r()*4.5)*1000);  // overlapping but spaced
+  }
+
+  // ── Critters: clustered, stochastic high events (flurry, then eerie silence) ──────────
+  function critterTick(){
+    if(!scene){critterTimer=null;return;}
+    const r=scene.critterRand;
+    let delay;
+    if(scene.burst>0){                        // inside a flurry — quick, close events
+      scene.burst--;
+      if(ctx&&ctx.state==='running')playCritter(r);
+      delay=0.12+r()*0.45;
+    }else{                                    // between flurries — genuine silence
+      delay=CRITTER_GAP_MIN+r()*CRITTER_GAP_RANGE;
+      scene.burst=1+Math.floor(r()*scene.density);   // next flurry size scales with how busy the phrase is
+    }
+    critterTimer=setTimeout(critterTick,delay*1000);
+  }
+  function playCritter(r){
+    if(!scene.critterPitches.length)return;
+    const now=ctx.currentTime;
+    const freq=scene.critterPitches[Math.floor(r()*scene.critterPitches.length)];
+    const dur=0.3+r()*0.45;                          // short, ploppy — a struck wooden bar
+    const pan=ctx.createStereoPanner();pan.pan.value=r()*2-1;  // scattered across the field
+    pan.connect(voiceBus);
+    // body: fundamental with a tiny downward pitch 'bonk' at the strike — the hollow-wood cue
+    const f0=ctx.createOscillator();f0.type='sine';
+    f0.frequency.setValueAtTime(freq*1.025,now);
+    f0.frequency.exponentialRampToValueAtTime(freq,now+0.025);   // settle in 25ms (no vibrato)
+    const g0=ctx.createGain();g0.gain.setValueAtTime(0.0001,now);
+    g0.gain.linearRampToValueAtTime(CRITTER_LEVEL,now+0.004);     // near-instant strike
+    g0.gain.exponentialRampToValueAtTime(0.0008,now+dur);
+    f0.connect(g0).connect(pan);f0.start(now);f0.stop(now+dur+0.05);
+    // the marimba 'ring': a partial two octaves up — kept quiet & short so it reads woody, not metallic
+    const f1=ctx.createOscillator();f1.type='sine';f1.frequency.value=freq*4;
+    const g1=ctx.createGain();g1.gain.setValueAtTime(0.0001,now);
+    g1.gain.linearRampToValueAtTime(CRITTER_LEVEL*0.2,now+0.004);
+    g1.gain.exponentialRampToValueAtTime(0.0008,now+dur*0.3);
+    f1.connect(g1).connect(pan);f1.start(now);f1.stop(now+dur*0.3+0.05);
+    // the 'knock': a brief low transient — the mallet on hollow wood (lower = duller, less metallic)
+    const k=ctx.createOscillator();k.type='triangle';k.frequency.value=freq*1.8;
+    const gk=ctx.createGain();gk.gain.setValueAtTime(CRITTER_LEVEL*0.3,now);
+    gk.gain.exponentialRampToValueAtTime(0.0008,now+0.045);       // gone in ~45ms
+    k.connect(gk).connect(pan);k.start(now);k.stop(now+0.06);
+  }
+
+  // ── Scene: the seeded, message-derived state the stochastic layers read from ──────────
+  function buildScene(message,rootMul){
+    const scale=PHRYGIAN;
+    const content=[...message].filter(c=>{const i=VALID.indexOf(c);return i>=0&&i<=35;});
+    const uniq=[...new Set(content)];
+    // critter pitches: high, in-scale, drawn from the message's own letters (mode-coloured)
+    const critterPitches=uniq.map(c=>{
+      const idx=VALID.indexOf(c),deg=scale[idx%scale.length],oct=Math.floor(idx/scale.length)%2;
+      return semis(CRITTER_BASE*rootMul,deg+12*oct);
+    });
+    // mid pitches: a SMALL message-seeded chord from a consonant pool — varies the sustained
+    // middle from phrase to phrase (so messages differ) while always staying grounded.
+    const pr=rng(hash('padset'+message)),pool=PAD_POOL.slice(),midPitches=[];
+    const count=2+Math.floor(pr()*2);            // a 2- or 3-note chord
+    for(let i=0;i<count&&pool.length;i++)midPitches.push(semis(MID_BASE*rootMul,pool.splice(Math.floor(pr()*pool.length),1)[0]));
+    return{
+      // a separate seeded stream per loop, so each is deterministic regardless of how their
+      // independent timers interleave — same words, same flurries, same swells, every time
+      critterRand:rng(hash('critter'+message)),
+      padRand:rng(hash('pad'+message)),
+      critterPitches,midPitches,
+      density:Math.min(6,2+Math.floor(content.length/8)),  // busier phrase = bigger flurries
+      burst:0,
+    };
+  }
+  function ensureLoops(){                      // start each loop once; they read `scene` each tick
+    if(critterTimer==null)critterTick();
+    if(padTimer==null)spawnPad();
+  }
+
+  function teardown(){
+    if(critterTimer!=null){clearTimeout(critterTimer);critterTimer=null;}
+    if(padTimer!=null){clearTimeout(padTimer);padTimer=null;}
+    scene=null;
+    if(!ctx)return;
+    const now=ctx.currentTime;
+    pads.forEach(p=>{try{
+      p.g.gain.cancelScheduledValues(now);p.g.gain.setValueAtTime(p.g.gain.value,now);
+      p.g.gain.linearRampToValueAtTime(0.0001,now+0.8);p.oscs.forEach(o=>o.stop(now+0.9));
+    }catch(e){}});
+    pads=[];
+    droneVoices.forEach(fadeOutVoice);droneVoices=[];
+    stopWind();
+  }
+
+  // Play the soundscape for a message — the phrase picks the key; full build of all layers.
+  // Called only on cast and on entering the forest, so the audio only ever changes on a cast.
+  function start(message){
+    ensureCtx();
+    const msg=(message||'').toLowerCase();
+    if(msg===sig&&playing)return;                 // this message is already playing
+    teardown();
+    sig=msg;playing=true;
+    if(!msg)return;
+    const rootMul=Math.pow(2,(hash(msg)%12)/12);  // phrase picks the key (0–11 semitones)
+    buildDrone(msg,rootMul);
+    startWind();tuneWind(msg);
+    scene=buildScene(msg,rootMul);
+    ensureLoops();
+  }
+  function stop(){teardown();playing=false;sig='';}
+
+  function setMuted(m){
+    muted=!!m;
+    localStorage.setItem('usnea_muted',muted?'1':'0');
+    if(master&&ctx){
+      const now=ctx.currentTime;
+      master.gain.cancelScheduledValues(now);
+      master.gain.setValueAtTime(master.gain.value,now);
+      master.gain.linearRampToValueAtTime(muted?0:1,now+0.15);
+    }
+    return muted;
+  }
+  return{ensureCtx,start,stop,setMuted,isMuted:()=>muted};
+})();
+
+function refreshSoundBtns(){
+  const m=ForestAudio.isMuted();
+  const hb=document.getElementById('sound-btn');
+  const sb=document.getElementById('sidebar-sound-btn');
+  const cb=document.getElementById('compose-sound-btn');
+  if(hb){hb.classList.toggle('muted',m);hb.setAttribute('aria-pressed',String(m));hb.title=m?'sound off':'sound on';}
+  if(sb){sb.textContent=m?'sound: off':'sound: on';sb.setAttribute('aria-pressed',String(m));}
+  if(cb){cb.classList.toggle('muted',m);cb.setAttribute('aria-pressed',String(m));cb.title=m?'sound off':'sound on';}
+}
+function toggleSound(){ForestAudio.setMuted(!ForestAudio.isMuted());refreshSoundBtns();}
+
 function showCompose(){
+  ForestAudio.stop();
   document.getElementById('app').classList.remove('play-mode');
   document.getElementById('app').classList.add('compose-mode');
 }
@@ -3022,7 +3342,17 @@ function showPlay(){
   document.getElementById('app').classList.remove('compose-mode');
   document.getElementById('app').classList.add('play-mode');
   if(isMobile)document.getElementById('decode-strip').classList.add('collapsed');
+  ForestAudio.ensureCtx();
+  ForestAudio.start(currentMsg);
+  refreshSoundBtns();
 }
+(function(){
+  const hb=document.getElementById('sound-btn');if(hb)hb.addEventListener('click',toggleSound);
+  const sb=document.getElementById('sidebar-sound-btn');if(sb)sb.addEventListener('click',toggleSound);
+  const cb=document.getElementById('compose-sound-btn');if(cb)cb.addEventListener('click',toggleSound);
+  refreshSoundBtns();
+  window.addEventListener('beforeunload',()=>{try{ForestAudio.stop();}catch(e){}});
+})();
 
 let castRaw='';
 function showScrollReady(){
@@ -3051,6 +3381,10 @@ document.getElementById('gen-btn').addEventListener('click',()=>{
   const cIdx=getCanopyIdx();
   window.location.hash='m='+encoded+(cIdx>0?'&c='+cIdx:'');
   showScrollReady();
+  // Casting (re)starts the soundscape for THIS message at its real forest key. Typing a new
+  // message never touches the audio — only the next cast does. Entering the forest with the
+  // same message is then a seamless no-op (sig already matches).
+  ForestAudio.start(cleaned);
 });
 document.getElementById('compose-share-btn').addEventListener('click',()=>{
   const btn=document.getElementById('compose-share-btn');
