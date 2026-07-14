@@ -3024,26 +3024,25 @@ document.getElementById('msg-in').addEventListener('input',function(){
   // (Audio is tied to the cast scroll only — typing never changes it; see the cast handler.)
 });
 // ── Forest audio ───────────────────────────────────────────────────────────
-// A tonal-leaning generative soundscape grown from the inscription — a companion
-// piece, not a forest simulator. Three layers + shared space:
-//   drone   = unique boundary chars (. ! ? ; , ')  → low sustained harmonic bed (the floor)
-//   wind    = filtered noise + slow tonal swells    → the flowing middle layer (depth)
-//   critters= clustered, stochastic high events      → sparse flurries-then-silence (life)
-//   reverb  = a shared decaying-noise space everything sits inside
-// All "randomness" is SEEDED from hash(message) — the same maze seed — so the same words
-// always grow the same forest; the randomness is texture, the determinism is identity.
-// Web Audio API only: no files, no libraries.
+// "Wind chimes in the moss." A generated MELODY was tried at length (motif grammar,
+// development ops, cadences, ternary form — see memory usnea-scroll-audio-plan) and
+// always read as feigned: melodic INTENT is the one thing a generator can't fake.
+// So the frame is now one the ear accepts randomness from — nobody asks a wind
+// chime for purpose. The message decides the chime TUNING (mode, root, which 4–6
+// scale degrees hang in the tree), the GUST pattern that stirs both the wind and
+// the chimes (one shared envelope: the chimes ring BECAUSE the wind gusts), and a
+// 3-note SIGNATURE CALL, identical at every return, timed by the maze's rooms —
+// the scroll's own creature. Same words → same forest → same chimes, same call.
+// Mobile safety: everything is rendered OFFLINE into one seamless looping
+// AudioBuffer, so live playback is a single buffer source — immune to main-thread
+// spikes. Pitched tones are short decaying strikes ≥220 Hz (no sustained low
+// pitch, no detuned pads); the only sustained material is filtered noise
+// (phone-safe at any register). Web Audio API only: no files, no libraries.
 const ForestAudio=(()=>{
-  // ── SKELETON (branch soundscape-v2) ─────────────────────────────────────────────────────
-  // The prior soundscape (drone + wind + pads + critters + reverb) was REMOVED — treated as a
-  // failed attempt. The old code is preserved on branches `audio-rework-baked` (drone-removed +
-  // pre-render) and `drone-audio-production` (the drone version). See memory
-  // `usnea-scroll-audio-plan` for the hard constraints and the full history of what failed & why.
-  // KEPT here: the autoplay "share fix" (unlock/armUnlock), the mute system, and the cast-only
-  // start/stop lifecycle + public API. The NEW message-derived sound goes in start()/teardown().
-  let ctx=null,master=null;
+  let ctx=null,master=null,mix=null;
   let muted=localStorage.getItem('usnea_muted')==='1';
   let sig='',playing=false;
+  let loopSrc=null,bakeToken=0;
 
   function ensureCtx(){
     if(ctx)return ctx;
@@ -3051,10 +3050,17 @@ const ForestAudio=(()=>{
     ctx=new (window.AudioContext||window.webkitAudioContext)({latencyHint:'playback'});
     master=ctx.createGain();
     master.gain.value=muted?0:1;                 // master IS the mute control
-    master.connect(ctx.destination);             // NEW MODEL: insert your master ceiling here — a
-                                                 // tanh WaveShaper soft-clip is the proven, browser-safe choice.
+    const clip=ctx.createWaveShaper();           // deterministic tanh ceiling — same on every browser
+    clip.curve=softClipCurve();clip.oversample='2x';
+    mix=ctx.createGain();mix.gain.value=0.0001;  // ramped up once the offline render lands
+    mix.connect(clip);clip.connect(master);master.connect(ctx.destination);
     armUnlock();
     return ctx;
+  }
+  function softClipCurve(){
+    const N=1024,k=1.5,norm=Math.tanh(k),curve=new Float32Array(N);
+    for(let i=0;i<N;i++){const x=i/(N-1)*2-1;curve[i]=Math.tanh(k*x)/norm;}
+    return curve;
   }
 
   // ── Autoplay unlock — KEEP (this is the working share fix) ──────────────────────────────
@@ -3077,24 +3083,218 @@ const ForestAudio=(()=>{
     UNLOCK_EVENTS.forEach(e=>window.addEventListener(e,go));
   }
 
-  function teardown(){
-    // NEW MODEL: stop/disconnect the running sound here (called on every start() and on stop()).
+  // ── The chime field: message → events (pure math, no audio) ──────────────────────────
+  // All five semitone-free pentatonic modes — no two scale notes can ring a dissonant
+  // second against each other, so overlapping chime decays always blend.
+  const MODES=[[0,2,4,7,9],[0,3,5,7,10],[0,2,5,7,10],[0,3,5,8,10],[0,2,5,7,9]]; // major, minor, suspended, blues-minor, ritusen
+  const ROOTS=[220,233.08,246.94,261.63,277.18,293.66,311.13,329.63]; // A3–E4 — lowest possible tone is 220 Hz
+  const DEG_MAX=12;                          // ceiling ≈2.5 octaves over root
+  const CHIME_LEVEL=0.25,WIND_LEVEL=0.04,WIND_BODY_LEVEL=0.03,REVERB_WET=0.45; // "barely there" mix
+
+  // Scale-index → Hz. deg counts steps of the 5-note mode; 5 steps = one octave.
+  function degToFreq(root,mode,deg){
+    const d=Math.max(0,Math.min(DEG_MAX,deg));
+    return root*Math.pow(2,Math.floor(d/5)+mode[d%5]/12);
+  }
+  // Bounce a degree back into range — never clamp (clamping flattens onto the boundary note).
+  function fold(deg){
+    if(deg<0)deg=-deg;
+    if(deg>DEG_MAX)deg=2*DEG_MAX-deg;
+    return Math.max(0,Math.min(DEG_MAX,deg));
+  }
+  // The message's rooms — the maze's own segmentation — one seed per room (they time the call).
+  function roomSeeds(msg){
+    const seeds=[];
+    try{
+      parseMessage(msg).forEach((seg,i)=>{
+        if(!seg.autoCollect&&seg.content.length)seeds.push(hash(seg.content+(i+'')));
+        (seg.asideChains||[]).forEach((ac,ci)=>ac.segments.forEach((a,ai)=>{
+          if(!a.autoCollect&&a.content.length)seeds.push(hash(a.content+(i+'a'+ci+ai)));
+        }));
+      });
+    }catch(e){}
+    return seeds;
+  }
+  function buildScape(msg){
+    const msgSeed=hash(msg);
+    const r=rng(msgSeed^0xc0da);
+    const mode=MODES[msgSeed%MODES.length];
+    const root=ROOTS[Math.floor(r()*ROOTS.length)];
+    let seeds=roomSeeds(msg);
+    if(!seeds.length)seeds=[msgSeed^0x11];
+    // The tuning: which 4–6 degrees hang in the tree. The tonic always does; low chimes
+    // are heavier, so they're likelier picks — the tree keeps its background gravity.
+    const pool=[0],cands=[1,2,3,4,5,6,7,8,9,10];
+    const want=4+Math.floor(r()*3);
+    while(pool.length<want){
+      const ws=cands.map(d=>1/(1+d*0.35));
+      let roll=r()*ws.reduce((a,b)=>a+b,0),idx=0;
+      while(roll>ws[idx]){roll-=ws[idx];idx++;}
+      pool.push(cands.splice(idx,1)[0]);
+    }
+    pool.sort((a,b)=>a-b);
+    // The gusts: three slow seeded sines summed. Calms are real rests; gusts stir the
+    // chimes AND swell the wind — one shared envelope, so cause and effect stay audible.
+    const comps=[[13+r()*10,r()*6.283,0.30],[29+r()*20,r()*6.283,0.35],[5+r()*4,r()*6.283,0.12]];
+    const gustAt=t=>{let g=0.45;comps.forEach(c=>{g+=c[2]*Math.sin(6.283*t/c[0]+c[1]);});return Math.max(0,Math.min(1,g));};
+    const loopSec=Math.min(72,42+seeds.length*5+r()*10);
+    const events=[];
+    // The distant voice (kept from the song era): an octave-away answer from the far side.
+    const echo=(src,delay)=>{
+      const eDeg=src.deg>=5?src.deg-5:src.deg+5;
+      events.push({t:src.t+delay,deg:eDeg,f:degToFreq(root,mode,eDeg),dt:1+(r()*2-1)*0.003,
+                   v:0.5,pan:src.pan?-src.pan:0.5,echo:1});
+    };
+    // The clapper: a gust swings it through NEIGHBOURING tubes — a burst of 1–6 strikes
+    // inside a second or so, then nothing until the next gust. Bursts, not evenly-spaced
+    // singles: spaced single notes read as a melodic line no matter what the pitches do;
+    // fast overlapping clusters read as texture. Calm air still ticks a lone tube sometimes.
+    for(let t=2;t<loopSec-2;t+=1){
+      const g=gustAt(t);
+      if(r()>=0.04+0.30*g*g)continue;
+      const size=1+Math.floor(r()*(1.5+4.5*g));           // stronger gusts swing more tubes
+      let bt=t+r(),idx=Math.min(pool.length-1,Math.floor(Math.pow(r(),1.6-0.7*g)*pool.length));
+      for(let s=0;s<size&&bt<loopSec-1;s++){
+        const deg=pool[idx];
+        const strike={t:bt,deg,f:degToFreq(root,mode,deg),dt:1+(r()*2-1)*0.003,
+                      v:0.4+0.6*g*(0.6+r()*0.4),pan:(r()*2-1)*0.45};
+        events.push(strike);
+        if(r()<0.08)echo(strike,1.8+r()*1.4);             // sometimes the far tree answers
+        bt+=0.09+r()*(0.55-0.35*g);                       // gusty bursts are tighter
+        idx=Math.min(pool.length-1,Math.max(0,idx+(r()<0.45?1:r()<0.85?-1:0))); // clapper hits neighbours
+      }
+    }
+    // The signature call: 3 notes composed by rule — a small shape, a small rhythm —
+    // IDENTICAL at every return. It sits ABOVE the chimes' gravity, so it reads as figure
+    // against ground: recognition without claiming to be a song. The rooms time and
+    // colour each return.
+    const SHAPES=[[2,-1],[1,1],[-1,2],[2,1],[-2,-1],[1,-2]];
+    const CALL_RHY=[[0,0.26,0.58],[0,0.20,0.40],[0,0.34,0.78]];
+    const shape=SHAPES[Math.floor(r()*SHAPES.length)];
+    const rhy=CALL_RHY[Math.floor(r()*CALL_RHY.length)];
+    const base=5+Math.floor(r()*3);
+    const callDegs=[base,fold(base+shape[0]),fold(base+shape[0]+shape[1])];
+    let ct=5+r()*6,ci=0;
+    while(ct<loopSec-7){
+      const cr=rng((seeds[ci%seeds.length])^0xca11);
+      const cv=0.8+cr()*0.2,cp=(cr()*2-1)*0.35;
+      callDegs.forEach((deg,i)=>{
+        events.push({t:ct+rhy[i],deg,f:degToFreq(root,mode,deg),dt:1+(cr()*2-1)*0.003,
+                     v:cv*(i===2?1:0.8),pan:cp,call:1});
+      });
+      if(cr()<0.75)echo({t:ct+rhy[2],deg:callDegs[2],pan:cp},1.6+cr()*1.2); // ...and the forest answers it
+      ci++;ct+=18+r()*17;
+    }
+    events.sort((a,b)=>a.t-b.t);
+    return{events,loopSec,gustAt,msgSeed};
   }
 
-  // ── Build the message-derived sound — NEW MODEL WRITES THIS ─────────────────────────────
-  // Seed everything from hash(message) (the same hash the maze grows from). Hard constraints (see
-  // memory `usnea-scroll-audio-plan`): message-derived, NOT random; device-agnostic (no isMobile);
-  // NO sustained low pitched tones (<~165 Hz — phone-speaker distortion); avoid rich detuned
-  // overlapping sustained pads (they scratch); noise textures are phone-safe. The offline
-  // pre-render / baked pipeline that fixed the mobile CPU blips is on branch `audio-rework-baked`.
+  // ── Offline rendering — the mobile fix: compose expensive, play cheap ─────────────────
+  function offlineCtx(seconds){
+    const OAC=window.OfflineAudioContext||window.webkitOfflineAudioContext;
+    return new OAC(2,Math.ceil(seconds*ctx.sampleRate),ctx.sampleRate);
+  }
+  // Render the whole scape — wind driven by the gust curve, every strike, the shared
+  // reverb — into ONE buffer, then fold it into a seamless loop. One buffer (unlike the
+  // song era's two) because the chimes must stay causally locked to the gusts that
+  // stirred them, loop after loop.
+  const LOOP_XFADE=3;
+  function renderScape(scape){
+    const total=scape.loopSec+LOOP_XFADE;
+    const octx=offlineCtx(total);
+    const out=octx.createGain();out.connect(octx.destination);
+    const rr=rng(0x1e57ab);                    // reverb character: fixed and deterministic
+    const irLen=Math.floor(octx.sampleRate*1.8),ir=octx.createBuffer(1,irLen,octx.sampleRate),ird=ir.getChannelData(0);
+    for(let i=0;i<irLen;i++)ird[i]=(rr()*2-1)*Math.pow(1-i/irLen,2.7);
+    const rev=octx.createConvolver();rev.buffer=ir;                             // convolution costs nothing offline
+    const wet=octx.createGain();wet.gain.value=REVERB_WET;rev.connect(wet).connect(out);
+    // wind — its swell is the SAME gust curve that stirred the chimes, baked into its gain
+    const wr=rng(scape.msgSeed^0x77ab);
+    const band=380+(scape.msgSeed%240),sweepHz=0.04+wr()*0.02;                  // draw params BEFORE the noise fill
+    const nb=octx.createBuffer(1,octx.length,octx.sampleRate),nd=nb.getChannelData(0);
+    for(let i=0;i<nd.length;i++)nd[i]=wr()*2-1; // full-length noise: never repeats inside the loop
+    const src=octx.createBufferSource();src.buffer=nb;
+    const bp=octx.createBiquadFilter();bp.type='bandpass';bp.frequency.value=band;bp.Q.value=0.9;
+    const wg=octx.createGain();
+    wg.gain.setValueAtTime(WIND_LEVEL*(0.35+0.9*scape.gustAt(0)),0);
+    for(let t=0.25;t<total;t+=0.25)wg.gain.linearRampToValueAtTime(WIND_LEVEL*(0.35+0.9*scape.gustAt(t)),t);
+    const sweep=octx.createOscillator();sweep.frequency.value=sweepHz;          // slow spectral drift, baked in
+    const sweepAmt=octx.createGain();sweepAmt.gain.value=240;sweep.connect(sweepAmt).connect(bp.frequency);
+    src.connect(bp).connect(wg);wg.connect(out);
+    const body=octx.createBufferSource();body.buffer=nb;                        // low noise floor — noise is phone-safe down here
+    const lp=octx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=200;lp.Q.value=0.7;
+    const bg=octx.createGain();bg.gain.value=WIND_BODY_LEVEL;
+    body.connect(lp).connect(bg).connect(out);
+    src.start(0);body.start(0);sweep.start(0);
+    // strikes — chimes, calls, distant answers. Metal-tube timbre, NOT the music-box bar
+    // (sine + harmonic partials + fast decay reads as marimba): the partials are the
+    // INHARMONIC transverse modes of a free tube (≈1×, 2.76×, 5.4×) and the tube rings for
+    // SECONDS — the long overlapping decays merging into a shimmer IS the wind-chime sound.
+    scape.events.forEach(n=>{
+      const full=Math.min(9,3.5+900/n.f);                                       // lower tubes ring longer
+      const when=n.t+0.05,ring=n.echo?full*0.6:full;
+      let entry;                                                                // per-strike width (skip if unsupported)
+      if(octx.createStereoPanner){entry=octx.createStereoPanner();entry.pan.value=n.pan;}
+      else entry=octx.createGain();
+      if(n.echo){                                                               // the distant voice is mostly reflections
+        const dry=octx.createGain();dry.gain.value=0.55;
+        entry.connect(dry);dry.connect(out);entry.connect(rev);
+      }else{entry.connect(out);entry.connect(rev);}
+      const strike=(mult,level,ringMul)=>{                                      // one tube mode
+        const o=octx.createOscillator();o.type='sine';o.frequency.value=n.f*mult*(n.dt||1);
+        const g=octx.createGain();
+        g.gain.setValueAtTime(0.0001,when);
+        g.gain.linearRampToValueAtTime(CHIME_LEVEL*n.v*level,when+0.004);
+        g.gain.exponentialRampToValueAtTime(0.0001,when+ring*ringMul);
+        o.connect(g).connect(entry);o.start(when);o.stop(when+ring*ringMul+0.05);
+      };
+      strike(1,1,1);                           // fundamental — carries the ring
+      strike(2.76,0.30,0.45);                  // first transverse mode — the metallic colour
+      if(!n.echo)strike(5.40,0.10,0.20);       // second mode — the glint at the strike; distance dulls it
+    });
+    return octx.startRendering().then(rendered=>seamLoop(rendered,scape.loopSec,LOOP_XFADE));
+  }
+  // Fold a (loop+xfade)-long render into a seamless loop: equal-power crossfade of the head
+  // with the material that would have followed the end, so the seam is continuous.
+  function seamLoop(rendered,loopSec,xfadeSec){
+    const sr=rendered.sampleRate,loopLen=Math.floor(loopSec*sr),xfn=Math.floor(xfadeSec*sr);
+    const out=ctx.createBuffer(2,loopLen,sr);
+    for(let ch=0;ch<2;ch++){
+      const s=rendered.getChannelData(Math.min(ch,rendered.numberOfChannels-1)),d=out.getChannelData(ch);
+      for(let i=0;i<loopLen;i++)d[i]=s[i];
+      for(let i=0;i<xfn;i++){const u=i/xfn;d[i]=s[i]*Math.sin(u*Math.PI/2)+s[i+loopLen]*Math.cos(u*Math.PI/2);}
+    }
+    return out;
+  }
+
+  function teardown(){
+    bakeToken++;                               // orphan any in-flight offline render
+    const src=loopSrc;loopSrc=null;
+    if(mix&&ctx){
+      const now=ctx.currentTime;
+      mix.gain.cancelScheduledValues(now);
+      mix.gain.setValueAtTime(mix.gain.value,now);
+      mix.gain.linearRampToValueAtTime(0.0001,now+0.08);  // fade first — stopping mid-ring clicks
+    }
+    if(src)setTimeout(()=>{try{src.stop();}catch(e){}try{src.disconnect();}catch(e){}},120);
+  }
+  // Compose (cheap math) → render offline (fast, off the realtime clock) → loop one buffer.
   function start(message){
     ensureCtx();
     const msg=(message||'').toLowerCase();
-    if(msg===sig&&playing)return;                // same message already playing
+    if(msg===sig&&playing)return;              // same message already playing
     teardown();
     sig=msg;playing=true;
     if(!msg)return;
-    // TODO(new model): generate and start the soundscape for `msg` here.
+    const token=bakeToken;
+    renderScape(buildScape(msg)).then(buf=>{
+      if(token!==bakeToken||sig!==msg||!playing)return;   // superseded by a newer cast or a stop
+      loopSrc=ctx.createBufferSource();loopSrc.buffer=buf;loopSrc.loop=true;
+      loopSrc.connect(mix);loopSrc.start();
+      const now=ctx.currentTime;               // gentle entrance
+      mix.gain.cancelScheduledValues(now);mix.gain.setValueAtTime(0.0001,now);
+      mix.gain.linearRampToValueAtTime(1,now+2.5);
+    }).catch(e=>console.warn('ForestAudio render failed:',e));
   }
   function stop(){teardown();playing=false;sig='';}
 
