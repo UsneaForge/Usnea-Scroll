@@ -3095,17 +3095,37 @@ const ForestAudio=(()=>{
     noiseBuf=ctx.createBuffer(1,Math.floor(ctx.sampleRate*2),ctx.sampleRate);
     const nd=noiseBuf.getChannelData(0);
     for(let i=0;i<nd.length;i++)nd[i]=Math.random()*2-1;
-    if(ctx.state==='suspended')armUnlock();   // a shared link that auto-enters has no gesture yet
+    armUnlock();   // a shared link that auto-enters has no gesture yet; harmless if already running
     return ctx;
   }
-  // Browsers block audio until the user interacts. Clicking "enter the forest" already
-  // counts; a shared link that auto-enters does not — so resume on the first interaction.
+  // Browsers block audio until the user interacts. Clicking "enter the forest" or casting
+  // already counts as that gesture; a shared link that auto-enters does NOT — so we resume
+  // the context on the first interaction anywhere on the page.
+  function unlock(){
+    if(!ctx)return null;
+    // iOS won't wake the audio hardware on resume() alone — play one silent sample in-gesture.
+    try{const s=ctx.createBufferSource();s.buffer=ctx.createBuffer(1,1,22050);s.connect(ctx.destination);s.start(0);}catch(e){}
+    return ctx.resume();
+  }
+  let unlockArmed=false;
+  const UNLOCK_EVENTS=['pointerdown','touchstart','keydown','click'];
   function armUnlock(){
+    if(unlockArmed)return;                     // one set of listeners is plenty
+    unlockArmed=true;
     const go=()=>{
-      if(ctx&&ctx.state==='suspended')ctx.resume();
-      ['pointerdown','keydown','touchstart'].forEach(e=>window.removeEventListener(e,go));
+      const p=unlock();
+      // Only stop listening once the context is TRULY running. The old code removed the
+      // listeners on the first event regardless, so a gesture that didn't resume (a state
+      // read that wasn't 'suspended', or a resume that a mobile browser quietly ignored)
+      // left it silent for good with no retry. Now every gesture retries until it takes.
+      if(p&&p.then)p.then(()=>{
+        if(ctx&&ctx.state==='running'){
+          UNLOCK_EVENTS.forEach(e=>window.removeEventListener(e,go));
+          unlockArmed=false;
+        }
+      }).catch(()=>{});
     };
-    ['pointerdown','keydown','touchstart'].forEach(e=>window.addEventListener(e,go));
+    UNLOCK_EVENTS.forEach(e=>window.addEventListener(e,go));
   }
 
   // ── Drone: the low harmonic floor (one sustained voice per unique boundary char) ─────
@@ -3356,7 +3376,7 @@ const ForestAudio=(()=>{
     }
     return muted;
   }
-  return{ensureCtx,start,stop,setMuted,isMuted:()=>muted};
+  return{ensureCtx,start,stop,setMuted,isMuted:()=>muted,unlock};
 })();
 
 function refreshSoundBtns(){
@@ -3579,6 +3599,7 @@ setupCanvas();
     requestAnimationFrame(()=>requestAnimationFrame(()=>overlay.classList.add('visible')));
   }
   function dismissReceiverOverlay(){
+    ForestAudio.unlock();   // first deliberate tap on a shared link — wake the soundscape here
     overlay.classList.remove('visible');
     overlay.addEventListener('transitionend',()=>overlay.style.display='none',{once:true});
   }
