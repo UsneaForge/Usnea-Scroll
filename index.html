@@ -1490,6 +1490,7 @@ function checkVictory(){
     const raw=localStorage.getItem(PROGRESS_KEY);
     if(raw){const s=JSON.parse(raw);s.completed=true;localStorage.setItem(PROGRESS_KEY,JSON.stringify(s));}
   }catch(e){}
+  ForestAudio.homecoming();   // the weather stills; the cabin calls the wanderer home
   setTimeout(showVictory,400);
 }
 
@@ -3039,10 +3040,10 @@ document.getElementById('msg-in').addEventListener('input',function(){
 // pitch, no detuned pads); the only sustained material is filtered noise
 // (phone-safe at any register). Web Audio API only: no files, no libraries.
 const ForestAudio=(()=>{
-  let ctx=null,master=null,mix=null;
+  let ctx=null,master=null,mix=null,voice=null;
   let muted=localStorage.getItem('usnea_muted')==='1';
   let sig='',playing=false;
-  let loopSrc=null,bakeToken=0;
+  let loopSrc=null,callBuf=null,bakeToken=0;
 
   function ensureCtx(){
     if(ctx)return ctx;
@@ -3052,8 +3053,10 @@ const ForestAudio=(()=>{
     master.gain.value=muted?0:1;                 // master IS the mute control
     const clip=ctx.createWaveShaper();           // deterministic tanh ceiling — same on every browser
     clip.curve=softClipCurve();clip.oversample='2x';
-    mix=ctx.createGain();mix.gain.value=0.0001;  // ramped up once the offline render lands
-    mix.connect(clip);clip.connect(master);master.connect(ctx.destination);
+    mix=ctx.createGain();mix.gain.value=0.0001;  // the looping scape — ramped up once the render lands
+    voice=ctx.createGain();voice.gain.value=1;   // acknowledgment calls — separate so homecoming's
+    mix.connect(clip);voice.connect(clip);       // hush of the scape doesn't duck the call itself
+    clip.connect(master);master.connect(ctx.destination);
     armUnlock();
     return ctx;
   }
@@ -3073,7 +3076,12 @@ const ForestAudio=(()=>{
     return ctx.resume();
   }
   let unlockArmed=false;
-  const UNLOCK_EVENTS=['pointerdown','touchstart','keydown','click'];
+  // Tested reality (don't re-fight this): browsers withhold the "user activation" that
+  // resume() needs from anything that reads as scrolling — a SWIPE never unlocks audio no
+  // matter which event you listen to, and arrow keys (page-scroll keys, and preventDefault'd
+  // by the maze) don't either. A TAP or click does. So: listen broadly, and when we're still
+  // locked after entering the forest, showPlay asks for that one tap with a toast.
+  const UNLOCK_EVENTS=['pointerdown','pointerup','touchstart','touchend','mousedown','keydown','keyup','click'];
   function armUnlock(){
     if(unlockArmed)return;unlockArmed=true;
     const go=()=>{
@@ -3089,7 +3097,7 @@ const ForestAudio=(()=>{
   const MODES=[[0,2,4,7,9],[0,3,5,7,10],[0,2,5,7,10],[0,3,5,8,10],[0,2,5,7,9]]; // major, minor, suspended, blues-minor, ritusen
   const ROOTS=[220,233.08,246.94,261.63,277.18,293.66,311.13,329.63]; // A3–E4 — lowest possible tone is 220 Hz
   const DEG_MAX=12;                          // ceiling ≈2.5 octaves over root
-  const CHIME_LEVEL=0.25,WIND_LEVEL=0.04,WIND_BODY_LEVEL=0.03,REVERB_WET=0.45; // "barely there" mix
+  const CHIME_LEVEL=0.25,WIND_LEVEL=0.1,WIND_BODY_LEVEL=0.035,REVERB_WET=0.45; // "barely there" mix
 
   // Scale-index → Hz. deg counts steps of the 5-note mode; 5 steps = one octave.
   function degToFreq(root,mode,deg){
@@ -3186,7 +3194,10 @@ const ForestAudio=(()=>{
       ci++;ct+=18+r()*17;
     }
     events.sort((a,b)=>a.t-b.t);
-    return{events,loopSec,gustAt,msgSeed};
+    // The canonical call, alone from t=0 — baked separately as the game's acknowledgment one-shot.
+    const call=callDegs.map((deg,i)=>({t:rhy[i],deg,f:degToFreq(root,mode,deg),dt:1,
+                                       v:i===2?1:0.8,pan:0}));
+    return{events,loopSec,gustAt,msgSeed,call};
   }
 
   // ── Offline rendering — the mobile fix: compose expensive, play cheap ─────────────────
@@ -3199,15 +3210,46 @@ const ForestAudio=(()=>{
   // song era's two) because the chimes must stay causally locked to the gusts that
   // stirred them, loop after loop.
   const LOOP_XFADE=3;
+  // The shared decaying-noise space — fixed, deterministic; convolution costs nothing offline.
+  function bakeSpace(octx,out){
+    const rr=rng(0x1e57ab);
+    const irLen=Math.floor(octx.sampleRate*1.8),ir=octx.createBuffer(1,irLen,octx.sampleRate),ird=ir.getChannelData(0);
+    for(let i=0;i<irLen;i++)ird[i]=(rr()*2-1)*Math.pow(1-i/irLen,2.7);
+    const rev=octx.createConvolver();rev.buffer=ir;
+    const wet=octx.createGain();wet.gain.value=REVERB_WET;rev.connect(wet).connect(out);
+    return rev;
+  }
+  // One tube strike — metal-tube timbre, NOT a struck bar (sine + harmonic partials + fast
+  // decay reads as marimba): the partials are the INHARMONIC transverse modes of a free tube
+  // (≈1×, 2.76×, 5.4×) and the tube rings for SECONDS — the long overlapping decays merging
+  // into a shimmer IS the wind-chime sound.
+  function bakeStrike(octx,out,rev,n){
+    const full=Math.min(9,3.5+900/n.f);                                         // lower tubes ring longer
+    const when=n.t+0.05,ring=n.echo?full*0.6:full;
+    let entry;                                                                  // per-strike width (skip if unsupported)
+    if(octx.createStereoPanner){entry=octx.createStereoPanner();entry.pan.value=n.pan;}
+    else entry=octx.createGain();
+    if(n.echo){                                                                 // the distant voice is mostly reflections
+      const dry=octx.createGain();dry.gain.value=0.55;
+      entry.connect(dry);dry.connect(out);entry.connect(rev);
+    }else{entry.connect(out);entry.connect(rev);}
+    const strike=(mult,level,ringMul)=>{                                        // one tube mode
+      const o=octx.createOscillator();o.type='sine';o.frequency.value=n.f*mult*(n.dt||1);
+      const g=octx.createGain();
+      g.gain.setValueAtTime(0.0001,when);
+      g.gain.linearRampToValueAtTime(CHIME_LEVEL*n.v*level,when+0.004);
+      g.gain.exponentialRampToValueAtTime(0.0001,when+ring*ringMul);
+      o.connect(g).connect(entry);o.start(when);o.stop(when+ring*ringMul+0.05);
+    };
+    strike(1,1,1);                             // fundamental — carries the ring
+    strike(2.76,0.30,0.45);                    // first transverse mode — the metallic colour
+    if(!n.echo)strike(5.40,0.10,0.20);         // second mode — the glint; distance dulls it
+  }
   function renderScape(scape){
     const total=scape.loopSec+LOOP_XFADE;
     const octx=offlineCtx(total);
     const out=octx.createGain();out.connect(octx.destination);
-    const rr=rng(0x1e57ab);                    // reverb character: fixed and deterministic
-    const irLen=Math.floor(octx.sampleRate*1.8),ir=octx.createBuffer(1,irLen,octx.sampleRate),ird=ir.getChannelData(0);
-    for(let i=0;i<irLen;i++)ird[i]=(rr()*2-1)*Math.pow(1-i/irLen,2.7);
-    const rev=octx.createConvolver();rev.buffer=ir;                             // convolution costs nothing offline
-    const wet=octx.createGain();wet.gain.value=REVERB_WET;rev.connect(wet).connect(out);
+    const rev=bakeSpace(octx,out);
     // wind — its swell is the SAME gust curve that stirred the chimes, baked into its gain
     const wr=rng(scape.msgSeed^0x77ab);
     const band=380+(scape.msgSeed%240),sweepHz=0.04+wr()*0.02;                  // draw params BEFORE the noise fill
@@ -3215,44 +3257,37 @@ const ForestAudio=(()=>{
     for(let i=0;i<nd.length;i++)nd[i]=wr()*2-1; // full-length noise: never repeats inside the loop
     const src=octx.createBufferSource();src.buffer=nb;
     const bp=octx.createBiquadFilter();bp.type='bandpass';bp.frequency.value=band;bp.Q.value=0.9;
+    // Deep dynamics: stillness must be nearly STILL or the gust↔chime correlation is
+    // inaudible (a 35% floor here was why "it's always blowing"). The power curve keeps
+    // the gust peaks while calms drop to a breath.
+    const windCurve=g=>WIND_LEVEL*(0.06+1.3*Math.pow(g,1.7));
     const wg=octx.createGain();
-    wg.gain.setValueAtTime(WIND_LEVEL*(0.35+0.9*scape.gustAt(0)),0);
-    for(let t=0.25;t<total;t+=0.25)wg.gain.linearRampToValueAtTime(WIND_LEVEL*(0.35+0.9*scape.gustAt(t)),t);
+    wg.gain.setValueAtTime(windCurve(scape.gustAt(0)),0);
+    for(let t=0.25;t<total;t+=0.25)wg.gain.linearRampToValueAtTime(windCurve(scape.gustAt(t)),t);
     const sweep=octx.createOscillator();sweep.frequency.value=sweepHz;          // slow spectral drift, baked in
     const sweepAmt=octx.createGain();sweepAmt.gain.value=240;sweep.connect(sweepAmt).connect(bp.frequency);
     src.connect(bp).connect(wg);wg.connect(out);
     const body=octx.createBufferSource();body.buffer=nb;                        // low noise floor — noise is phone-safe down here
     const lp=octx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=200;lp.Q.value=0.7;
-    const bg=octx.createGain();bg.gain.value=WIND_BODY_LEVEL;
+    const bg=octx.createGain();                            // the floor gusts too — a CONSTANT floor masked every stillness
+    const bodyCurve=g=>WIND_BODY_LEVEL*(0.12+1.15*Math.pow(g,1.4));
+    bg.gain.setValueAtTime(bodyCurve(scape.gustAt(0)),0);
+    for(let t=0.25;t<total;t+=0.25)bg.gain.linearRampToValueAtTime(bodyCurve(scape.gustAt(t)),t);
     body.connect(lp).connect(bg).connect(out);
     src.start(0);body.start(0);sweep.start(0);
-    // strikes — chimes, calls, distant answers. Metal-tube timbre, NOT the music-box bar
-    // (sine + harmonic partials + fast decay reads as marimba): the partials are the
-    // INHARMONIC transverse modes of a free tube (≈1×, 2.76×, 5.4×) and the tube rings for
-    // SECONDS — the long overlapping decays merging into a shimmer IS the wind-chime sound.
-    scape.events.forEach(n=>{
-      const full=Math.min(9,3.5+900/n.f);                                       // lower tubes ring longer
-      const when=n.t+0.05,ring=n.echo?full*0.6:full;
-      let entry;                                                                // per-strike width (skip if unsupported)
-      if(octx.createStereoPanner){entry=octx.createStereoPanner();entry.pan.value=n.pan;}
-      else entry=octx.createGain();
-      if(n.echo){                                                               // the distant voice is mostly reflections
-        const dry=octx.createGain();dry.gain.value=0.55;
-        entry.connect(dry);dry.connect(out);entry.connect(rev);
-      }else{entry.connect(out);entry.connect(rev);}
-      const strike=(mult,level,ringMul)=>{                                      // one tube mode
-        const o=octx.createOscillator();o.type='sine';o.frequency.value=n.f*mult*(n.dt||1);
-        const g=octx.createGain();
-        g.gain.setValueAtTime(0.0001,when);
-        g.gain.linearRampToValueAtTime(CHIME_LEVEL*n.v*level,when+0.004);
-        g.gain.exponentialRampToValueAtTime(0.0001,when+ring*ringMul);
-        o.connect(g).connect(entry);o.start(when);o.stop(when+ring*ringMul+0.05);
-      };
-      strike(1,1,1);                           // fundamental — carries the ring
-      strike(2.76,0.30,0.45);                  // first transverse mode — the metallic colour
-      if(!n.echo)strike(5.40,0.10,0.20);       // second mode — the glint at the strike; distance dulls it
-    });
+    // strikes — chimes, calls, distant answers
+    scape.events.forEach(n=>bakeStrike(octx,out,rev,n));
     return octx.startRendering().then(rendered=>seamLoop(rendered,scape.loopSec,LOOP_XFADE));
+  }
+  // The acknowledgment one-shot: the scroll's call alone, baked small — so the game can
+  // answer the wanderer's progress by playing a buffer (near-free), never live synthesis.
+  function renderCall(scape){
+    const last=scape.call[scape.call.length-1];
+    const octx=offlineCtx(last.t+Math.min(9,3.5+900/last.f)+2);
+    const out=octx.createGain();out.connect(octx.destination);
+    const rev=bakeSpace(octx,out);
+    scape.call.forEach(n=>bakeStrike(octx,out,rev,n));
+    return octx.startRendering();
   }
   // Fold a (loop+xfade)-long render into a seamless loop: equal-power crossfade of the head
   // with the material that would have followed the end, so the seam is continuous.
@@ -3269,12 +3304,13 @@ const ForestAudio=(()=>{
 
   function teardown(){
     bakeToken++;                               // orphan any in-flight offline render
-    const src=loopSrc;loopSrc=null;
-    if(mix&&ctx){
+    const src=loopSrc;loopSrc=null;callBuf=null;
+    if(ctx){
       const now=ctx.currentTime;
-      mix.gain.cancelScheduledValues(now);
-      mix.gain.setValueAtTime(mix.gain.value,now);
-      mix.gain.linearRampToValueAtTime(0.0001,now+0.08);  // fade first — stopping mid-ring clicks
+      [mix,voice].forEach(g=>{if(!g)return;    // fade first — stopping mid-ring clicks
+        g.gain.cancelScheduledValues(now);
+        g.gain.setValueAtTime(g.gain.value,now);
+        g.gain.linearRampToValueAtTime(0.0001,now+0.08);});
     }
     if(src)setTimeout(()=>{try{src.stop();}catch(e){}try{src.disconnect();}catch(e){}},120);
   }
@@ -3287,16 +3323,36 @@ const ForestAudio=(()=>{
     sig=msg;playing=true;
     if(!msg)return;
     const token=bakeToken;
-    renderScape(buildScape(msg)).then(buf=>{
+    const scape=buildScape(msg);
+    Promise.all([renderScape(scape),renderCall(scape)]).then(([loopBuf,ackBuf])=>{
       if(token!==bakeToken||sig!==msg||!playing)return;   // superseded by a newer cast or a stop
-      loopSrc=ctx.createBufferSource();loopSrc.buffer=buf;loopSrc.loop=true;
+      callBuf=ackBuf;
+      loopSrc=ctx.createBufferSource();loopSrc.buffer=loopBuf;loopSrc.loop=true;
       loopSrc.connect(mix);loopSrc.start();
       const now=ctx.currentTime;               // gentle entrance
       mix.gain.cancelScheduledValues(now);mix.gain.setValueAtTime(0.0001,now);
       mix.gain.linearRampToValueAtTime(1,now+2.5);
+      voice.gain.cancelScheduledValues(now);voice.gain.setValueAtTime(1,now);
+      // The greeting: the cabin calls twice as the forest fades in — the mirror of
+      // homecoming's two calls at the end. One full loop: called in, called home.
+      [0.9,3.4].forEach(dt=>{const s=ctx.createBufferSource();s.buffer=callBuf;s.connect(voice);s.start(now+dt);});
     }).catch(e=>console.warn('ForestAudio render failed:',e));
   }
   function stop(){teardown();playing=false;sig='';}
+
+  // Homecoming — the message is whole: the weather stills, the cabin calls twice,
+  // and the evening settles back in. (Called from checkVictory; no-ops until the
+  // render has landed.)
+  function homecoming(){
+    if(!ctx||!callBuf)return;
+    const now=ctx.currentTime;
+    mix.gain.cancelScheduledValues(now);
+    mix.gain.setValueAtTime(mix.gain.value,now);
+    mix.gain.linearRampToValueAtTime(0.3,now+1.2);
+    mix.gain.setValueAtTime(0.3,now+6);
+    mix.gain.linearRampToValueAtTime(1,now+14);
+    [0.9,3.4].forEach(dt=>{const s=ctx.createBufferSource();s.buffer=callBuf;s.connect(voice);s.start(now+dt);});
+  }
 
   function setMuted(m){
     muted=!!m;
@@ -3309,7 +3365,8 @@ const ForestAudio=(()=>{
     }
     return muted;
   }
-  return{ensureCtx,start,stop,setMuted,isMuted:()=>muted,unlock};
+  return{ensureCtx,start,stop,setMuted,isMuted:()=>muted,unlock,homecoming,
+         isRunning:()=>!!ctx&&ctx.state==='running'};
 })();
 
 function refreshSoundBtns(){
@@ -3335,6 +3392,12 @@ function showPlay(){
   ForestAudio.ensureCtx();
   ForestAudio.start(currentMsg);
   refreshSoundBtns();
+  // Swipes and arrow keys move the player but can never unlock audio (browsers withhold
+  // activation from scroll-like input by design). If we're still locked shortly after
+  // entry, ask for the one tap the browser requires.
+  setTimeout(()=>{
+    if(!ForestAudio.isMuted()&&!ForestAudio.isRunning())showToast('tap anywhere to hear the forest');
+  },1600);
 }
 (function(){
   const hb=document.getElementById('sound-btn');if(hb)hb.addEventListener('click',toggleSound);
@@ -3480,7 +3543,6 @@ if(window.visualViewport){window.visualViewport.addEventListener('resize',()=>{i
 // ── Dev reset via ?reset param ────────────────────────────────────────────
 if(new URLSearchParams(window.location.search).has('reset')){
   localStorage.removeItem('usnea_intro_seen');
-  localStorage.removeItem('usnea_receiver_seen');
 }
 
 // ── First-time intro overlay ───────────────────────────────────────────────
@@ -3540,10 +3602,11 @@ setupCanvas();
   overlay.addEventListener('click',e=>{if(e.target===overlay)dismissReceiverOverlay();});
   document.getElementById('help-btn').addEventListener('click',showReceiverOverlay);
   document.getElementById('sidebar-help-btn').addEventListener('click',showReceiverOverlay);
-  if(window.location.hash.includes('m=')&&!localStorage.getItem('usnea_receiver_seen')){
-    localStorage.setItem('usnea_receiver_seen','1');
-    showReceiverOverlay();
-  }
+  // Shown on EVERY shared-link arrival (not just the first): the button click is the one
+  // user gesture browsers accept for audio, so the greeting plays from its first note —
+  // without it the audio clock stays frozen and the entry calls pile up garbled. It's also
+  // the threshold moment: knock before the forest greets you.
+  if(window.location.hash.includes('m='))showReceiverOverlay();
 })();
 (()=>{
   const overlay=document.getElementById('about-overlay');
